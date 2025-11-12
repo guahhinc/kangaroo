@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Kangaroo</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kangaroo">
+    <link rel="apple-touch-icon" href="https://avatars.githubusercontent.com/u/208152170?v=4">
+    <link rel="icon" href="https://avatars.githubusercontent.com/u/208152170?v=4" type="image/png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
+
+    <style>
+        :root {
+            --primary-bg-color: #ffffff; --secondary-bg-color: #fafafa; --primary-text-color: #1c1c1e;
+            --secondary-text-color: #8A8A8E; --border-color: #EAEAEA; --accent-color: #c39078; 
+            --error-color: #ed4956; --warning-color: #FFC107; --banner-height: 0px; 
+            --shadow-color: rgba(0, 0, 0, 0.1); --button-hover-bg-color: #b17d65; --button-secondary-bg-color: #f0f0f0;
+        }
+        [data-theme="dark"] {
+            --primary-bg-color: #000000; --secondary-bg-color: #121212; --primary-text-color: #F5F5F7;
+            --secondary-text-color: #8D8D92; --border-color: #2D2D2F; --accent-color: #c39078;
+            --warning-color: #FFD54F; --button-hover-bg-color: #b17d65; --button-secondary-bg-color: #2a2a2a;
+        }
+        * { box-sizing: border-box; font-family: 'Inter Tight', -apple-system, sans-serif; }
+        html, body {
+            background-color: var(--primary-bg-color); color: var(--primary-text-color); margin: 0; padding: 0; 
+            transition: background-color 0.3s, color 0.3s;
+        }
+        body.logged-in { padding-top: calc(50px + env(safe-area-inset-top) + 20px + var(--banner-height)); transition: padding-top 0.3s ease-in-out, padding-bottom 0.3s ease-in-out; }
+        .view { display: none; }
+        .view.active { display: block; }
+        .container { max-width: 600px; margin: 0 auto; padding: 0 16px; }
+        .hidden { display: none !important; }
+        button { font-weight: 600; cursor: pointer; border-radius: 10px; border: none; box-shadow: none; }
+        button.primary { background-color: var(--accent-color); color: white; transition: opacity 0.2s; }
+        button.primary:hover:not(:disabled) { opacity: 0.85; }
+        button.secondary { background-color: var(--border-color); color: var(--primary-text-color); }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; opacity: 0.7; }
+        a { color: var(--accent-color); cursor: pointer; font-weight: 600; }
+        .logo { cursor: pointer; }
+        .logo, #auth-view .logo { height: 32px; }
+        .pfp { border-radius: 50%; object-fit: cover; background-color: var(--border-color); cursor: pointer; }
+        .pfp-sm { width: 36px; height: 36px; }
+        .pfp-lg { width: 80px; height: 80px; }
+        .hashtag-link { color: var(--accent-color); font-weight: normal; text-decoration: none; }
+        .hashtag-link:hover { text-decoration: underline; }
+        button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+        .material-symbols-rounded { font-family: 'Material Symbols Rounded' !important; vertical-align: -6px; font-size: inherit; }
+        .header-icon .material-symbols-rounded { font-size: 28px; vertical-align: -8px; }
+        .delete-btn .material-symbols-rounded { font-size: 24px; }
+        #auth-view, #suspended-view, #outage-view { padding-top: 10vh; text-align: center; }
+        #auth-view .logo { height: 40px; margin-bottom: 10px; }
+        #auth-container { max-width: 350px; margin: 20px auto; padding: 30px; border: 1px solid var(--border-color); border-radius: 12px; background-color: var(--secondary-bg-color); }
+        #auth-container input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid var(--border-color); border-radius: 10px; background-color: var(--primary-bg-color); color: var(--primary-text-color); font-size: 16px; }
+        #auth-container button { width: 100%; padding: 12px; font-size: 16px; }
+        #suspended-view p, #outage-view p { max-width: 350px; margin: 20px auto; line-height: 1.5; }
+        #suspended-view button, #outage-view button { padding: 12px 24px; font-size: 16px; margin-top: 10px; }
+        .warning-icon { color: var(--warning-color); font-size: 48px; margin-bottom: 16px; display: inline-block; }
+        header { position: fixed; top: calc(env(safe-area-inset-top) + var(--banner-height)); left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; background-color: var(--primary-bg-color); z-index: 10; border-bottom: 1px solid var(--border-color); min-height: 50px; padding: 0 16px; transition: top 0.3s ease-in-out; }
+        .header-actions { display: flex; align-items: center; gap: 20px; }
+        .header-icon { font-size: 24px; cursor: pointer; position: relative; }
+        #notification-dot, #message-dot { position: absolute; top: -2px; right: -4px; width: 10px; height: 10px; background-color: var(--error-color); border-radius: 50%; border: 2px solid var(--primary-bg-color); display: none; }
+        #global-banner { position: fixed; top: env(safe-area-inset-top); left: 0; right: 0; background-color: var(--primary-text-color); color: var(--primary-bg-color); text-align: center; padding: 8px 16px; font-size: 14px; font-weight: 600; z-index: 11; line-height: 1.4; transition: transform 0.3s ease-in-out; }
+        #global-banner.hidden { transform: translateY(-100%); }
+        #create-post-form { padding: 16px; margin: 0 0 20px 0; border: 1px solid var(--border-color); border-radius: 12px; background-color: var(--secondary-bg-color); }
+        .create-post-options { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        #post-type-select { padding: 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--primary-bg-color); color: var(--primary-text-color); font-size: 14px; }
+        #create-post-form textarea { width: 100%; min-height: 60px; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; background-color: var(--primary-bg-color); color: var(--primary-text-color); font-size: 16px; resize: vertical; margin-bottom: 0; }
+        .create-post-left-actions { display: flex; align-items: center; gap: 8px; }
+        .create-post-actions button { padding: 8px 16px; }
+        #add-image-btn { background: none; padding: 5px; color: var(--secondary-text-color); font-size: 26px; }
+        #post-image-preview-container { position: relative; margin-top: 10px; }
+        #post-image-preview { max-width: 100%; max-height: 200px; border-radius: 12px; }
+        #remove-image-btn { position: absolute; top: 8px; right: 8px; background-color: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 18px; line-height: 24px; text-align: center; cursor: pointer; padding: 0; font-weight: bold; }
+        .post { border: 1px solid var(--border-color); border-radius: 12px; margin: 20px 0; background-color: var(--secondary-bg-color); box-shadow: none; overflow: hidden; }
+        .post-header { display: flex; align-items: center; padding: 12px 16px; gap: 12px; cursor: pointer; position: relative; }
+        .post-header-info { flex-grow: 1; }
+        .post-display-name { font-weight: 600; font-size: 16px; display: inline-flex; align-items: center; }
+        .post-timestamp { font-size: 14px; color: var(--secondary-text-color); margin-left: 8px; font-weight: 400; }
+        .post-content { padding: 0 16px 12px; font-size: 16px; white-space: pre-wrap; word-wrap: break-word; line-height: 1.5; }
+        .post-content img { max-width: 100%; border-radius: 12px; margin-top: 10px; }
+        .post-actions { padding: 8px 16px; display: flex; align-items: center; gap: 10px; }
+        .like-btn { font-size: 26px; background: none; color: var(--primary-text-color); padding: 0; }
+        .like-btn.liked { color: #F44336; }
+        .like-count { font-weight: 600; color: var(--secondary-text-color); }
+        .comments-section { padding: 12px 16px; border-top: 1px solid var(--border-color); }
+        .comment { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; font-size: 14px; gap: 8px; }
+        .comment-author { font-weight: 600; margin-right: 6px; cursor: pointer; display: inline-flex; align-items: center; }
+        .comment-text { flex-grow: 1; word-break: break-word; }
+        .comment-form { display: flex; margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 10px; }
+        .comment-form input { flex-grow: 1; border: none; padding: 8px; background-color: transparent; color: var(--primary-text-color); font-size: 14px; }
+        .comment-form button { border: none; background: none; color: var(--accent-color); font-weight: 600; }
+        .post-options { position: relative; margin-left: auto; }
+        .options-btn { background: none; border: none; cursor: pointer; color: var(--secondary-text-color); padding: 4px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .options-btn:hover { background-color: var(--border-color); color: var(--primary-text-color); }
+        .options-menu { position: absolute; top: 100%; right: 0; background-color: var(--secondary-bg-color); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 12px var(--shadow-color); z-index: 10; min-width: 150px; overflow: hidden; display: flex; flex-direction: column; }
+        .options-menu button { background: none; border: none; box-shadow: none; text-align: left; padding: 10px 15px; width: 100%; border-radius: 0; font-size: 14px; border-bottom: 1px solid var(--border-color); color: var(--primary-text-color); }
+        .options-menu button:last-child { border-bottom: none; }
+        .options-menu button:hover { background-color: var(--border-color); }
+        .options-menu .delete-btn, .options-menu .block-btn { color: var(--error-color); font-weight: 700; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: flex-start; padding-top: 10vh; z-index: 1000; backdrop-filter: blur(4px); }
+        .modal-content { background: var(--secondary-bg-color); padding: 20px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .modal-header h2 { margin: 0; font-weight: 700; }
+        .close-modal-btn { font-size: 24px; cursor: pointer; border: none; background: none; color: var(--primary-text-color); }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color); }
+        .setting-row:last-child { border-bottom: none; }
+        .user-info .display-name { font-weight: 600; display: inline-flex; align-items: center; }
+        .user-info .username { color: var(--secondary-text-color); font-size: 14px; }
+        #logout-btn { background: none; color: var(--error-color); font-size: 16px; padding: 0; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch input:disabled + .slider { cursor: not-allowed; opacity: 0.6; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 28px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(22px); }
+        .skeleton { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        .skeleton .pfp, .skeleton .post-display-name, .skeleton .post-content, .skeleton .display-name, .skeleton .username, .skeleton .description { background-color: var(--border-color); border-radius: 10px; }
+        .skeleton .post-display-name { height: 20px; width: 30%; }
+        .skeleton .post-content { height: 60px; }
+        #image-url-modal input { width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 20px; }
+        #image-url-modal .modal-actions { text-align: right; }
+        #image-url-modal .modal-actions button { padding: 10px 20px; }
+        #report-modal textarea { width: 100%; min-height: 100px; resize: vertical; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 20px; }
+        #report-modal .modal-actions { text-align: right; }
+        #report-modal .modal-actions button { padding: 10px 20px; }
+        #notifications-modal .modal-content { max-width: 450px; }
+        #notifications-modal .modal-header { padding-bottom: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px; }
+        #notifications-list { max-height: 60vh; overflow-y: auto; }
+        .notification-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; }
+        .notification-item-clickable { cursor: pointer; }
+        .notification-item-clickable:hover { background-color: var(--border-color); }
+        .notification-text { flex-grow: 1; font-size: 14px; }
+        .notification-text .username { font-weight: 600; }
+        .notification-timestamp { font-size: 12px; color: var(--secondary-text-color); margin-top: 2px; }
+        .delete-notification-btn { margin-left: auto; }
+        #search-modal .modal-content { max-width: 500px; }
+        #search-input { width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 20px; }
+        #search-results h3 { margin: 20px 0 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        .search-result-user { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 10px; cursor: pointer; }
+        .search-result-user:hover { background-color: var(--border-color); }
+        .search-result-post { padding: 8px; border-radius: 10px; font-size: 14px; color: var(--secondary-text-color); }
+        .profile-header {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .profile-grid {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 15px;
+        }
+        .profile-grid .pfp-lg {
+            flex-shrink: 0;
+            width: 90px;
+            height: 90px;
+            cursor: default;
+        }
+        .profile-info {
+            flex-grow: 1;
+            min-width: 0;
+        }
+        .profile-username-options {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .profile-username {
+            font-size: 22px;
+            font-weight: 400; 
+            color: var(--primary-text-color);
+        }
+        .profile-header .username { 
+            display: none; 
+        } 
+        .profile-stats-ig {
+            display: flex;
+            gap: 40px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .profile-stats-ig .stat {
+            text-align: center;
+            cursor: default;
+        }
+        .profile-stats-ig .stat span {
+            display: block;
+            font-weight: 600;
+        }
+        .profile-actions-ig {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .profile-actions-ig button {
+            flex-grow: 1;
+            min-width: 0;
+            padding: 7px 16px;
+            font-size: 14px;
+        }
+        .profile-display-name-ig {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        .profile-description-ig {
+            line-height: 1.4;
+            font-size: 15px;
+        }
+        
+        @media (max-width: 500px) {
+            .profile-grid {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 10px;
+                padding: 10px 0;
+            }
+            .profile-grid .pfp-lg {
+                width: 70px;
+                height: 70px;
+            }
+            .profile-info {
+                display: contents; 
+            }
+            .profile-username-options {
+                justify-content: center;
+                margin-bottom: 10px;
+            }
+            .profile-stats-ig {
+                justify-content: space-around;
+                width: 100%;
+                padding: 10px 0;
+                margin-bottom: 10px;
+                border-top: 1px solid var(--border-color);
+                border-bottom: 1px solid var(--border-color);
+            }
+            .profile-actions-ig {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            .profile-display-name-bio {
+                text-align: left;
+                width: 100%;
+                padding: 0 16px;
+            }
+        }
+        .back-btn { margin: 20px 0; font-weight: 600; cursor: pointer; display: inline-block; }
+        .profile-options-menu { position: absolute; top: 0; right: 0; }
+        .profile-options-menu .options-btn { padding: 8px; }
+        .profile-options-menu .options-btn .material-symbols-rounded { font-size: 24px; vertical-align: -6px; }
+        .profile-options-menu .options-menu { min-width: 160px; }
+        .form-group { margin-bottom: 16px; text-align: left; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 6px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; background-color: var(--secondary-bg-color); color: var(--primary-text-color); font-size: 16px; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        #edit-profile-view .actions { margin-top: 20px; }
+        #edit-profile-view .actions button { width: 100%; padding: 12px; font-size: 16px; }
+        #pfp-choices-gallery { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        #pfp-choices-gallery img { width: 60px; height: 60px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s; }
+        #pfp-choices-gallery img.selected { border-color: var(--accent-color); }
+        .setting-description { font-size: 13px; color: var(--secondary-text-color); margin-top: 4px; padding-right: 15px; }
+        .settings-section + .settings-section { border-top: 1px solid var(--border-color); margin-top: 10px; padding-top: 10px; }
+        .settings-section-title { font-size: 16px; font-weight: 700; margin: 0 0 10px 0; }
+        #settings-view .settings-section .setting-row:last-of-type { border-bottom: none; }
+        .blocked-user-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+        .blocked-user-info { flex-grow: 1; }
+        .unblock-btn { padding: 6px 12px; font-size: 14px; }
+        .form-group-tos { display: flex; align-items: flex-start; text-align: left; font-size: 13px; margin-bottom: 16px; color: var(--secondary-text-color); cursor: pointer; line-height: 1.4; }
+        .form-group-tos input[type="checkbox"] { display: none; }
+        .tos-checkmark { height: 22px; width: 22px; background-color: transparent; border: 2px solid var(--border-color); border-radius: 6px; margin-right: 12px; flex-shrink: 0; position: relative; top: 1px; transition: background-color 0.2s, border-color 0.2s; }
+        .form-group-tos input:checked + .tos-checkmark { background-color: var(--accent-color); border-color: var(--accent-color); }
+        .tos-checkmark:after { content: ""; position: absolute; display: none; left: 6px; top: 1px; width: 6px; height: 12px; border: solid white; border-width: 0 3px 3px 0; transform: rotate(45deg); }
+        .form-group-tos input:checked + .tos-checkmark:after { display: block; }
+        .form-group-tos .tos-text { font-weight: 400; }
+        
+        #messages-view .container {
+            max-width: 100%;
+            padding: 0;
+            height: 100%;
+        }
+        #messages-view {
+            height: calc(100vh - (50px + env(safe-area-inset-top) + 20px + var(--banner-height)));
+        }
+        .messages-container {
+            border-left: none;
+            border-right: none;
+            border-radius: 0;
+            height: 100%;
+            max-height: none;
+            background-color: var(--secondary-bg-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #conversations-list, #conversation-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transition: transform 0.3s ease-in-out, opacity 0.3s; background-color: var(--secondary-bg-color); }
+        #conversations-list.is-loading { opacity: 0.6; pointer-events: none; }
+        #conversations-list { transform: translateX(0); overflow-y: auto; z-index: 2; }
+        #conversation-view { transform: translateX(100%); display: flex; flex-direction: column; z-index: 1; }
+        .messages-container.show-chat-view #conversations-list { transform: translateX(-100%); }
+        .messages-container.show-chat-view #conversation-view { transform: translateX(0); }
+        @media (min-width: 768px) { 
+            #messages-view .container { padding: 0; } 
+            .messages-container { display: flex; position: static; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); } 
+            #conversations-list, #conversation-view { position: static; transform: none !important; height: auto; } 
+            #conversations-list { width: 35%; min-width: 280px; border-right: 1px solid var(--border-color); } 
+            #conversation-view { flex-grow: 1; } 
+            #back-to-convos-btn { display: none !important; } 
+        }
+        .conversation-item { display: flex; align-items: center; padding: 12px; gap: 12px; cursor: pointer; border-bottom: 1px solid var(--border-color); position: relative; }
+        .conversation-item:last-child { border-bottom: none; }
+        .conversation-item:hover { background-color: var(--border-color); }
+        .conversation-item.active { background-color: var(--accent-color); color: white; }
+        .conversation-item.active .convo-details .username, .conversation-item.active .convo-details .last-message { color: #f0f0f0; }
+        .convo-details { flex-grow: 1; overflow: hidden; }
+        .convo-details .username { font-weight: 600; font-size: 15px; }
+        .convo-details .last-message { font-size: 13px; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .unread-dot { width: 10px; height: 10px; background-color: var(--accent-color); border-radius: 50%; margin-left: auto; flex-shrink: 0; }
+        .conversation-item.active .unread-dot { background-color: white; }
+        #conversation-header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border-color); font-weight: 600; }
+        #conversation-header a { text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; flex-grow: 1; }
+        #back-to-convos-btn { display: block; background: none; border: none; cursor: pointer; padding: 5px; margin-right: 10px; color: var(--primary-text-color); }
+        #messages-list { flex-grow: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+        .message-wrapper { display: flex; flex-direction: column; }
+        .message-wrapper.sent { flex-direction: row; justify-content: flex-end; align-items: center; position: relative; }
+        .message-wrapper.received { align-items: flex-start; }
+        .message-bubble { max-width: 80%; padding: 8px 12px; border-radius: 18px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+        .message-bubble.sent { background-color: var(--accent-color); color: white; border-bottom-right-radius: 4px; }
+        .message-bubble.received { background-color: var(--border-color); color: var(--primary-text-color); border-bottom-left-radius: 4px; }
+        .message-status { font-size: 11px; color: var(--secondary-text-color); padding: 2px 8px 0 0; text-align: right; width: 100%;}
+        .message-status.error { color: var(--error-color); font-weight: 600; }
+        #message-input-form { display: flex; padding: 10px; border-top: 1px solid var(--border-color); }
+        #message-input-form input { flex-grow: 1; border: none; padding: 10px; border-radius: 20px; background-color: var(--border-color); color: var(--primary-text-color); font-size: 15px; margin-right: 10px; }
+        #message-input-form button { padding: 0 16px; font-size: 15px; }
+        #conversation-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--secondary-text-color); text-align: center; }
+        #conversation-placeholder .material-symbols-rounded { font-size: 60px; margin-bottom: 16px; }
+        .message-options { position: relative; margin-left: 4px; }
+        .message-options .options-btn { padding: 2px; }
+        .message-options .options-btn .material-symbols-rounded { font-size: 18px; vertical-align: -4px; }
+        .message-options .options-menu { width: 120px; top: 50%; right: 100%; transform: translateY(-50%); margin-right: 8px; }
+
+        #settings-btn .pfp-sm {
+            width: 32px;
+            height: 32px;
+            vertical-align: middle;
+        }
+        .modal#profile-shortcut-modal {
+            background: transparent;
+            backdrop-filter: none;
+            justify-content: unset;
+            align-items: unset;
+            padding-top: 0;
+        }
+        
+        .modal#profile-shortcut-modal .modal-content {
+            position: absolute;
+            padding: 0;
+            max-width: 250px;
+            min-width: 180px;
+            background-color: var(--secondary-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #profile-shortcut-modal .modal-content button {
+            background: none;
+            border: none;
+            box-shadow: none;
+            text-align: left;
+            padding: 12px 16px;
+            width: 100%;
+            border-radius: 0;
+            font-size: 15px;
+            color: var(--primary-text-color);
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #profile-shortcut-modal .modal-content button:not(:last-child) {
+            border-bottom: 1px solid var(--border-color);
+        }
+        #profile-shortcut-modal .modal-content button:hover {
+            background-color: var(--border-color);
+        }
+
+        @media (max-width: 768px) {
+            header {
+                top: auto;
+                bottom: 0;
+                border-bottom: none;
+                border-top: 1px solid var(--border-color);
+                padding-bottom: env(safe-area-inset-bottom);
+                min-height: 65px; 
+                align-items: flex-start;
+                padding-top: 8px;
+            }
+            header .logo {
+                display: none;
+            }
+            .header-actions {
+                width: 100%;
+                justify-content: space-around;
+            }
+            body.logged-in {
+                padding-top: calc(20px + var(--banner-height) + env(safe-area-inset-top));
+                padding-bottom: calc(65px + env(safe-area-inset-bottom));
+            }
+            
+            /* MODIFICATION START: Mobile messages layout fix */
+            #messages-view {
+                height: auto; /* Let the container define the height */
+            }
+            .messages-container {
+                border: none;
+                /* Calculate height to fit screen between top padding and bottom nav bar */
+                height: calc(100vh - (20px + var(--banner-height) + env(safe-area-inset-top)) - (65px + env(safe-area-inset-bottom)));
+            }
+            /* MODIFICATION END */
+        }
+    </style>
+</head>
+<body>
+
+    <header class="hidden">
+        <img src="https://raw.githubusercontent.com/guahhinc/fire/main/Kangaroo.png" alt="Kangaroo Logo" class="logo" id="logo-btn">
+        <div class="header-actions">
+            <div class="header-icon" id="home-btn"><span class="material-symbols-rounded">home</span></div>
+            <div class="header-icon" id="search-btn"><span class="material-symbols-rounded">search</span></div>
+            <div class="header-icon" id="messages-btn">
+                <span class="material-symbols-rounded">send</span>
+                <span id="message-dot"></span>
+            </div>
+            <div class="header-icon" id="notifications-btn">
+                <span class="material-symbols-rounded">notifications</span>
+                <span id="notification-dot"></span>
+            </div>
+            <div class="header-icon" id="settings-btn"></div>
+        </div>
+    </header>
+
+    <div id="global-banner" class="hidden"></div>
+
+    <div id="auth-view" class="view">
+        <div class="container">
+            <img src="https://raw.githubusercontent.com/guahhinc/fire/main/Kangaroo.png" alt="Kangaroo Logo" class="logo">
+            <div id="auth-container">
+                <div id="login-form">
+                    <input type="text" id="login-username" placeholder="Username" autocomplete="username">
+                    <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+                    <button id="login-btn" class="primary">Log In</button>
+                    <p id="login-error" class="error-message hidden"></p>
+                    <p>Don't have an account? <a id="show-register-link">Sign up</a></p>
+                </div>
+                <div id="register-form" class="hidden">
+                    <input type="text" id="register-username" placeholder="Username (no spaces)" autocomplete="username">
+                    <input type="text" id="register-displayname" placeholder="Display Name">
+                    <input type="password" id="register-password" placeholder="Password" autocomplete="new-password">
+                    <label class="form-group-tos">
+                        <input type="checkbox" id="register-tos">
+                        <span class="tos-checkmark"></span>
+                        <span class="tos-text">I agree to the <a href="https://sites.google.com/view/guahh/terms-of-service" target="_blank" rel="noopener noreferrer">Terms of Service and Privacy Policy</a>.</span>
+                    </label>
+                    <button id="register-btn" class="primary" disabled>Sign Up</button>
+                    <p id="register-error" class="error-message hidden"></p>
+                    <p>Have an account? <a id="show-login-link">Log in</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="suspended-view" class="view">
+        <div class="container">
+            <span class="material-symbols-rounded warning-icon" style="font-size: 52px;">warning</span>
+            <h2>Account Banned</h2>
+            <div id="ban-details-container" style="max-width: 400px; margin: 20px auto; line-height: 1.6; text-align: left;">
+                <p style="text-align: center; margin-bottom: 20px;">Contact guahhinc@outlook.com for more info or appeal.</p>
+                <p style="font-weight: 600; text-align: center;">Reason:</p>
+                <p id="ban-reason" style="margin-top: 5px; background-color: var(--border-color); padding: 12px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; text-align: center;"></p>
+                <div id="ban-timer-container">
+                    <p style="margin-top: 20px; font-weight: 600; text-align: center;">Time remaining:</p>
+                    <p id="ban-countdown" style="font-size: 1.2em; font-weight: 700; margin-top: 5px; text-align: center;"></p>
+                </div>
+            </div>
+            <button id="suspended-logout-btn" class="secondary">Log Out</button>
+        </div>
+    </div>
+
+    <div id="outage-view" class="view">
+        <div class="container">
+            <span class="material-symbols-rounded warning-icon">warning</span>
+            <h2>Server Maintenance</h2>
+            <p>The server is currently undergoing maintenance, we'll be back soon.</p>
+            <button id="outage-logout-btn" class="secondary">Log Out</button>
+        </div>
+    </div>
+
+    <div id="main-app-view" class="view">
+        <div class="container">
+            <main>
+                <section id="create-post-form">
+                    <textarea id="post-content-input" placeholder="What's on your mind?"></textarea>
+                    <div id="post-image-preview-container" class="hidden"></div>
+                    <div class="create-post-options">
+                        <div class="create-post-left-actions">
+                            <select id="post-type-select">
+                                <option value="regular">Post</option>
+                                <option value="story-24">Story (24h)</option>
+                                <option value="story-12">Story (12h)</option>
+                            </select>
+                            <button id="add-image-btn" title="Add Image URL"><span class="material-symbols-rounded">add_photo_alternate</span></button>
+                        </div>
+                        <div class="create-post-actions">
+                            <button id="submit-post-btn" class="primary">Post</button>
+                        </div>
+                    </div>
+                </section>
+                <section id="feed"></section>
+            </main>
+        </div>
+    </div>
+    
+    <div id="profile-page-view" class="view">
+        <div class="container"><a class="back-btn" data-nav="feed">&larr; Back to Feed</a><div id="profile-content"></div><div id="profile-feed"></div></div>
+    </div>
+
+    <div id="settings-view" class="view">
+        <div class="container">
+            <h2 style="margin-top: 20px;">Settings</h2>
+            <div class="settings-section">
+                <h4 class="settings-section-title">👤 Account</h4>
+                <div class="setting-row" id="settings-user-info-row"></div>
+                <div class="setting-row">
+                    <button id="logout-btn">Log Out</button>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h4 class="settings-section-title">🔒 Privacy</h4>
+                <div class="setting-row">
+                    <div>
+                        <span>Private Profile</span>
+                        <p class="setting-description">Only friends can see your full profile.</p>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="privacy-switch"><span class="slider"></span></label>
+                </div>
+                <div class="setting-row">
+                    <div>
+                        <span>Who can see your posts</span>
+                        <p class="setting-description">Control who can see your posts and stories.</p>
+                    </div>
+                    <select id="post-visibility-select" style="padding: 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--primary-bg-color); color: var(--primary-text-color);">
+                        <option value="Everyone">Everyone</option>
+                        <option value="Followers">Followers</option>
+                        <option value="Friends">Friends</option>
+                    </select>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h4 class="settings-section-title">🎨 Customisation</h4>
+                <div class="setting-row">
+                    <div>
+                        <span>Dark Mode</span>
+                        <p class="setting-description">Change the website theme.</p>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="theme-switch"><span class="slider"></span></label>
+                </div>
+            </div>
+             <div class="settings-section">
+                <h4 class="settings-section-title">🚫 Blocked Users</h4>
+                <p class="setting-description" style="padding: 0 0 10px 0;">You won't see posts, profiles, or notifications from people you block.</p>
+                <div id="blocked-users-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="hashtag-feed-view" class="view">
+        <div class="container">
+            <a class="back-btn" data-nav="feed">&larr; Back to Feed</a>
+            <h2 id="hashtag-title" style="margin-top: 20px;"></h2>
+            <section id="hashtag-feed"></section>
+        </div>
+    </div>
+
+    <div id="edit-profile-view" class="view">
+        <div class="container">
+            <a class="back-btn" id="back-to-profile-btn">&larr; Back to Profile</a>
+            <h2>Edit Profile</h2>
+            <div class="form-group">
+                <label for="edit-pfp-url">Profile Picture URL</label>
+                <input type="url" id="edit-pfp-url" placeholder="https://example.com/image.png">
+            </div>
+            <div class="form-group">
+                <label>Or choose an avatar:</label>
+                <div id="pfp-choices-gallery"></div>
+            </div>
+            <div class="form-group">
+                <label for="edit-display-name">Display Name</label>
+                <input type="text" id="edit-display-name">
+            </div>
+            <div class="form-group">
+                <label for="edit-description">Description</label>
+                <textarea id="edit-description"></textarea>
+            </div>
+            <div class="actions">
+                <button id="save-profile-btn" class="primary">Save Changes</button>
+            </div>
+            <p id="edit-profile-error" class="error-message hidden"></p>
+        </div>
+    </div>
+
+    <div id="messages-view" class="view">
+        <div class="container">
+            <div class="messages-container">
+                <div id="conversations-list"></div>
+                <div id="conversation-view">
+                    <div id="conversation-placeholder">
+                        <span class="material-symbols-rounded">chat</span>
+                        <h3>Your Messages</h3>
+                        <p>Select a conversation to start chatting.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="search-modal" class="modal hidden">
+        <div class="modal-content"><div class="modal-header"><h2>Search</h2><button class="close-modal-btn"><span class="material-symbols-rounded">close</span></button></div><input type="search" id="search-input" placeholder="Search for users or posts..."><div id="search-results"></div></div>
+    </div>
+
+    <div id="notifications-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Notifications</h2>
+                <button class="close-modal-btn"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div id="notifications-list"></div>
+        </div>
+    </div>
+
+    <div id="image-url-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Image URL</h2>
+                <button class="close-modal-btn"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <input type="url" id="image-url-modal-input" placeholder="https://example.com/image.png">
+            <div class="modal-actions">
+                <button id="image-url-modal-done-btn" class="primary">Done</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="report-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="report-modal-title">Report</h2>
+                <button class="close-modal-btn"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <p>Please provide a reason for your report. This helps us take appropriate action.</p>
+            <textarea id="report-reason-input" placeholder="e.g., Spam, harassment, inappropriate content..."></textarea>
+            <div class="modal-actions">
+                <button id="submit-report-btn" class="primary">Submit Report</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-shortcut-modal" class="modal hidden">
+        <div class="modal-content">
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxm-DlJnvD3M0aiPhjFd6dUWs2AWOhKJn_IUciUpM_rHGBujx77I14m98YIgUfK7BE/exec';
+
+            const pfpChoices = [
+                'https://api.dicebear.com/8.x/pixel-art/svg?seed=pixel',
+                'https://api.dicebear.com/8.x/adventurer/svg?seed=adventurer',
+                'https://api.dicebear.com/8.x/bottts/svg?seed=bot',
+                'https://api.dicebear.com/8.x/micah/svg?seed=micah',
+                'https://api.dicebear.com/8.x/miniavs/svg?seed=miniavs',
+                'https://api.dicebear.com/8.x/thumbs/svg?seed=thumbs',
+                'https://api.dicebear.com/8.x/lorelei/svg?seed=lorelei',
+                'https://api.dicebear.com/8.x/initials/svg?seed=Kangaroo'
+            ];
+
+            const state = { 
+                currentUser: null, posts: [], currentUserFollowingList: [], currentUserFollowersList: [],
+                notifications: [], unreadNotificationCount: 0, currentView: null, profileUser: null,
+                backgroundPosts: null, backgroundRefreshIntervalId: null, storyUpdateIntervalId: null,
+                feedScrollPosition: 0, postImageUrl: null, editingPostId: null, banCountdownIntervalId: null,
+                scrollToPostId: null, conversations: [],
+                currentConversation: { otherUserId: null, messages: [] }, messagePollingIntervalId: null,
+                reporting: { userId: null, postId: null },
+                blockedUsersList: [],
+                isConversationLoading: false
+            };
+            
+            const views = { 
+                auth: document.getElementById('auth-view'), feed: document.getElementById('main-app-view'), 
+                profile: document.getElementById('profile-page-view'), editProfile: document.getElementById('edit-profile-view'), 
+                suspended: document.getElementById('suspended-view'), outage: document.getElementById('outage-view'), 
+                hashtagFeed: document.getElementById('hashtag-feed-view'), messages: document.getElementById('messages-view'),
+                settings: document.getElementById('settings-view')
+            };
+
+            const modals = { search: document.getElementById('search-modal'), notifications: document.getElementById('notifications-modal'), imageUrl: document.getElementById('image-url-modal'), report: document.getElementById('report-modal'), profileShortcut: document.getElementById('profile-shortcut-modal') };
+            const VERIFIED_SVG = `<span class="material-symbols-rounded" style="color: #1DA1F2; vertical-align: -4px; margin-left: 5px;">verified</span>`;
+
+            const api = {
+                async call(action, body = {}, method = 'POST') {
+                    try {
+                        let url = SCRIPT_URL;
+                        const options = { method, mode: 'cors', redirect: 'follow' };
+                        if (method === 'GET') {
+                            const params = new URLSearchParams({ action, ...body });
+                            url += `?${params.toString()}`;
+                        } else {
+                            options.body = JSON.stringify({ action, ...body });
+                        }
+                        const response = await fetch(url, options);
+                        if (!response.ok) throw new Error(`Network error: ${response.status}`);
+                        const result = await response.json();
+                        if (result.status === 'error') {
+                            const error = new Error(result.message);
+                            if (result.banDetails) error.banDetails = result.banDetails;
+                            throw error;
+                        }
+                        return result;
+                    } catch (error) { console.error(`API Call failed for action "${action}":`, error); throw error; }
+                }
+            };
+
+            const ui = {
+                render() {
+                    const header = document.querySelector('header');
+                    const isUserLoggedIn = ['feed', 'profile', 'editProfile', 'hashtagFeed', 'messages', 'settings'].includes(state.currentView);
+                    header.classList.toggle('hidden', !isUserLoggedIn);
+                    document.body.classList.toggle('logged-in', isUserLoggedIn);
+                    Object.values(views).forEach(v => v.classList.remove('active'));
+                    views[state.currentView]?.classList.add('active');
+                    if (state.currentView === 'feed') this.renderFeed(state.posts, document.getElementById('feed'), true);
+                    if (state.currentView === 'profile') this.renderProfilePage();
+                    if (state.currentView === 'editProfile') this.renderEditProfilePage();
+                    if (state.currentView === 'messages') this.renderMessagesPage();
+                    if (state.currentView === 'settings') this.renderSettingsPage();
+                },
+                renderBanPage(banDetails) { if (state.banCountdownIntervalId) clearInterval(state.banCountdownIntervalId); const reasonEl = document.getElementById('ban-reason'); const timerContainer = document.getElementById('ban-timer-container'); const countdownEl = document.getElementById('ban-countdown'); reasonEl.textContent = banDetails.reason || 'No reason provided.'; if (banDetails.endDate === 'permanent') { timerContainer.classList.add('hidden'); return; } timerContainer.classList.remove('hidden'); const endDate = new Date(banDetails.endDate); const updateCountdown = () => { const now = new Date(); const diff = endDate - now; if (diff <= 0) { countdownEl.textContent = 'Your ban has expired. You can now log out and log back in.'; clearInterval(state.banCountdownIntervalId); state.banCountdownIntervalId = null; return; } const days = Math.floor(diff / (1000 * 60 * 60 * 24)); const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)); const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)); let countdownText = ''; if (days > 0) countdownText += `${days}d `; if (hours > 0 || days > 0) countdownText += `${hours}h `; countdownText += `${minutes}m`; countdownEl.textContent = countdownText.trim(); }; updateCountdown(); state.banCountdownIntervalId = setInterval(updateCountdown, 1000); },
+                renderFeed(posts, container, isMainFeed = false) {
+                    const validPosts = posts.filter(p => !p.isStory || new Date() < new Date(p.expiryTimestamp));
+                    if (!validPosts || validPosts.length === 0) {
+                        container.innerHTML = '<p style="text-align: center; color: var(--secondary-text-color);">No posts to see here.</p>';
+                        return;
+                    }
+                    let postsToRender = [...validPosts];
+                    if (isMainFeed) {
+                        const now = new Date();
+                        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                        const stories = []; const priorityPostsWithImage = []; const priorityPostsWithoutImage = []; const otherPosts = [];
+                        postsToRender.forEach(post => {
+                            const isFollowed = state.currentUserFollowingList.includes(post.userId);
+                            const isOwnPost = post.userId === state.currentUser.userId;
+                            const hasImage = post.postContent.includes('<img');
+                            if (post.isStory && (isFollowed || isOwnPost)) { stories.push(post); } 
+                            else { const postDate = new Date(post.timestamp); if ((isFollowed || isOwnPost) && postDate > twentyFourHoursAgo) { if (hasImage) { priorityPostsWithImage.push(post); } else { priorityPostsWithoutImage.push(post); } } else { otherPosts.push(post); } }
+                        });
+                        stories.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                        priorityPostsWithImage.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                        priorityPostsWithoutImage.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                        postsToRender = [...stories, ...priorityPostsWithImage, ...priorityPostsWithoutImage, ...otherPosts];
+                    }
+                    container.innerHTML = '';
+                    postsToRender.forEach(post => container.appendChild(this.createPostElement(post)));
+                },
+                renderProfilePage() {
+                    if (!state.profileUser) return;
+                    if (state.profileUser.isSuspended) { const pfpUrl = sanitizeHTML(state.profileUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${state.profileUser.username}`; document.getElementById('profile-content').innerHTML = ` <div class="profile-header"> <img src="${pfpUrl}" class="pfp pfp-lg" style="filter: grayscale(100%); cursor: default;"> <div class="display-name" style="color: var(--secondary-text-color);">${sanitizeHTML(state.profileUser.displayName)}</div> <div class="username" style="color: var(--secondary-text-color);">@${sanitizeHTML(state.profileUser.username)}</div> <div style="margin-top: 20px; padding: 12px; background-color: var(--border-color); border-radius: 12px; font-weight: 600;"> This account is currently banned. </div> </div>`; document.getElementById('profile-feed').innerHTML = ''; return; }
+                    
+                    const isOwnProfile = state.currentUser?.userId === state.profileUser.userId;
+                    const pfpUrl = sanitizeHTML(state.profileUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${state.profileUser.username}`;
+                    const postCount = state.posts.filter(p => p.userId === state.profileUser.userId).length;
+                    
+                    let actionButtonHTML = '';
+                    let optionsMenuHTML = '';
+
+                    if (!isOwnProfile) {
+                        const relationship = state.profileUser.relationship;
+                        let followButton = '';
+                        if (relationship === 'Friends') { followButton = `<button id="follow-btn" class="secondary">Friends</button>`; }
+                        else if (relationship === 'Following') { followButton = `<button id="follow-btn" class="secondary">Unfollow</button>`; }
+                        else { followButton = `<button id="follow-btn" class="primary">Follow</button>`; }
+                        
+                        actionButtonHTML = followButton;
+
+                        if (state.profileUser.profilePrivacy !== 'private' || relationship === 'Friends') {
+                            const messageButton = `<button id="message-user-btn" class="secondary">Message</button>`;
+                            actionButtonHTML += ` ${messageButton}`;
+                        }
+                        
+                        optionsMenuHTML = `
+                            <div class="profile-options-menu">
+                                <button class="options-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button>
+                                <div class="options-menu hidden">
+                                    <button data-action="report-user" data-user-id="${state.profileUser.userId}">Report User</button>
+                                    <button class="block-btn" data-action="block-user" data-user-id="${state.profileUser.userId}">Block User</button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        actionButtonHTML = `<button id="edit-profile-btn" class="secondary">Edit Profile</button>`;
+                    }
+
+                    if (state.profileUser.profilePrivacy === 'private' && !isOwnProfile && state.profileUser.relationship !== 'Friends') {
+                        document.getElementById('profile-content').innerHTML = `
+                            <div class="profile-header">
+                                ${optionsMenuHTML}
+                                <div class="profile-grid">
+                                    <img src="${pfpUrl}" class="pfp pfp-lg">
+                                    <div class="profile-info">
+                                        <div class="profile-username-options">
+                                            <span class="profile-username">@${sanitizeHTML(state.profileUser.username)}</span>
+                                        </div>
+                                        <div class="profile-actions-ig" style="margin-top: 10px;">${actionButtonHTML}</div>
+                                    </div>
+                                </div>
+                                <div class="profile-display-name-bio" style="padding: 0 16px;">
+                                    <div class="profile-display-name-ig">${sanitizeHTML(state.profileUser.displayName)} ${String(state.profileUser.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</div>
+                                    <div style="margin-top: 15px; padding: 12px; background-color: var(--border-color); border-radius: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <span class="material-symbols-rounded" style="font-size: 20px; vertical-align: -4px;">lock</span> This Account is Private
+                                    </div>
+                                    <p style="color: var(--secondary-text-color); margin-top: 10px; text-align: center;">Become friends with this user to see their posts and profile details.</p>
+                                </div>
+                            </div>`;
+                        document.getElementById('profile-feed').innerHTML = '';
+                        return;
+                    }
+                    
+                    document.getElementById('profile-content').innerHTML = `
+                        <div class="profile-header">
+                            ${optionsMenuHTML}
+                            <div class="profile-grid">
+                                <img src="${pfpUrl}" class="pfp pfp-lg">
+                                <div class="profile-info">
+                                    <div class="profile-username-options">
+                                        <span class="profile-username">@${sanitizeHTML(state.profileUser.username)}</span>
+                                    </div>
+                                    <div class="profile-actions-ig">${actionButtonHTML}</div>
+                                    <div class="profile-stats-ig" style="margin-top: 15px;">
+                                        <div class="stat"><span>${postCount}</span> Posts</div>
+                                        <div class="stat"><span>${state.profileUser.followers}</span> Followers</div>
+                                        <div class="stat"><span>${state.profileUser.following}</span> Following</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="profile-display-name-bio" style="padding: 0 16px;">
+                                <div class="profile-display-name-ig">${sanitizeHTML(state.profileUser.displayName)} ${String(state.profileUser.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</div>
+                                <p class="profile-description-ig">${sanitizeHTML(state.profileUser.description || '')}</p>
+                            </div>
+                        </div>`;
+                        
+                    this.renderFeed(state.posts.filter(p => p.userId === state.profileUser.userId), document.getElementById('profile-feed'), false);
+                    if (state.scrollToPostId) { const postIdToScroll = state.scrollToPostId; setTimeout(() => { const postElement = document.querySelector(`#profile-feed .post[data-post-id="${postIdToScroll}"]`); if (postElement) { postElement.scrollIntoView({ behavior: 'smooth', block: 'center' }); const warningColor = getComputedStyle(document.documentElement).getPropertyValue('--warning-color'); postElement.style.transition = 'background-color 1s ease'; postElement.style.backgroundColor = `${warningColor}4D`; setTimeout(() => { postElement.style.backgroundColor = ''; }, 2500); } }, 200); state.scrollToPostId = null; }
+                },
+                formatPostContent(content) { if (!content) return ''; let inTag = false; let formattedContent = ""; for(let i = 0; i < content.length; i++) { if(content[i] === '<') inTag = true; if(content[i] === '>') inTag = false; if(content[i] === '#' && !inTag && (i === 0 || /\s/.test(content[i-1]))) { let tag = content.substring(i+1).match(/^\w+/); if(tag) { formattedContent += `<a href="#" class="hashtag-link" data-hashtag="${tag[0]}">#${tag[0]}</a>`; i += tag[0].length; continue; } } formattedContent += content[i]; } return formattedContent; },
+                renderEditProfilePage() {
+                    document.getElementById('edit-pfp-url').value = state.currentUser.profilePictureUrl;
+                    document.getElementById('edit-display-name').value = state.currentUser.displayName;
+                    document.getElementById('edit-description').value = state.currentUser.description;
+
+                    const gallery = document.getElementById('pfp-choices-gallery');
+                    gallery.innerHTML = '';
+                    pfpChoices.forEach(url => {
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.dataset.url = url;
+                        if (state.currentUser.profilePictureUrl === url) {
+                            img.classList.add('selected');
+                        }
+                        gallery.appendChild(img);
+                    });
+                },
+                createPostElement(post) {
+                    const postDiv = document.createElement('div'); postDiv.className = 'post'; postDiv.dataset.postId = post.postId; postDiv.dataset.userId = post.userId;
+                    const isLiked = post.likes.some(like => like.userId === state.currentUser.userId); const isAuthor = post.userId === state.currentUser.userId;
+                    const pfpUrl = sanitizeHTML(post.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${post.username}`;
+                    let authorSpecificButtons = isAuthor ? `<button class="edit-btn" data-action="edit-post">Edit Post</button><button class="delete-btn" data-action="delete-post">Delete Post</button>` : `<button data-action="report-post">Report Post</button><button class="block-btn" data-action="block-user" data-user-id="${post.userId}">Block User</button>`;
+                    const optionsMenuHTML = `<div class="post-options"><button class="options-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button><div class="options-menu hidden">${authorSpecificButtons}</div></div>`;
+                    postDiv.innerHTML = `<div class="post-header"><img src="${pfpUrl}" class="pfp pfp-sm"><div class="post-header-info"><span class="post-display-name">${sanitizeHTML(post.displayName)} ${String(post.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</span><span class="post-timestamp" data-timestamp="${post.isStory ? post.expiryTimestamp : post.timestamp}" data-is-story="${post.isStory || false}">${formatTimestamp(post)}</span></div>${optionsMenuHTML}</div><div class="post-content"></div><div class="post-actions"><button class="like-btn ${isLiked ? 'liked' : ''}"><span class="material-symbols-rounded">favorite</span></button><span class="like-count">${post.likes.length} likes</span></div><div class="comments-section"><div class="comments-list">${[...post.comments].reverse().map(c => this.createCommentElement(c)).join('')}</div><form class="comment-form"><input type="text" placeholder="Add a comment..." required><button type="submit" class="primary">Post</button></form></div>`;
+                    postDiv.querySelector('.post-content').innerHTML = this.formatPostContent(post.postContent);
+                    return postDiv;
+                },
+                createCommentElement(comment) { const isAuthor = comment.userId === state.currentUser.userId; const optionsMenuHTML = `<div class="post-options"><button class="options-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button><div class="options-menu hidden"><button class="delete-btn" data-action="delete-comment">Delete Comment</button></div></div>`; return `<div class="comment" data-comment-id="${comment.commentId}" data-user-id="${comment.userId}"><div class="comment-text"><a class="comment-author">${sanitizeHTML(comment.displayName)} ${String(comment.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</a><span>${sanitizeHTML(comment.commentText)}</span></div>${isAuthor ? optionsMenuHTML : ''}</div>`; },
+                renderNotifications() { const container = document.getElementById('notifications-list'); if(state.notifications.length === 0) { container.innerHTML = '<p style="text-align: center; color: var(--secondary-text-color); padding: 20px 0;">No new notifications.</p>'; return; } container.innerHTML = ''; state.notifications.forEach(n => { const item = document.createElement('div'); item.className = 'notification-item'; item.dataset.notificationId = n.notificationId; item.dataset.actorId = n.actorUserId; item.dataset.postId = n.postId; let text = ''; switch(n.actionType) { case 'like': text = 'liked your post.'; break; case 'comment': text = 'commented on your post.'; break; case 'follow': text = 'started following you.'; break; } const pfpUrl = sanitizeHTML(n.actorProfilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${n.actorDisplayName}`; item.innerHTML = ` <div class="notification-item-clickable" style="display: flex; align-items: center; gap: 12px; flex-grow: 1;"> <img src="${pfpUrl}" class="pfp pfp-sm"> <div class="notification-text"> <span class="username">${sanitizeHTML(n.actorDisplayName)}</span> ${text} <div class="notification-timestamp">${formatTimestamp({timestamp: n.timestamp})}</div> </div> </div> <button class="delete-btn delete-notification-btn" title="Delete Notification"><span class="material-symbols-rounded">close</span></button> `; container.appendChild(item); }); },
+                renderSearchResults(results) { const container = document.getElementById('search-results'); if (!results.users.length && !results.posts.length) { container.innerHTML = '<p style="text-align:center; color: var(--secondary-text-color);">No results found.</p>'; return; } container.innerHTML = ` ${results.users.length ? `<h3>Users</h3><div id="search-users-list"></div>` : ''} ${results.posts.length ? `<h3>Posts</h3><div id="search-posts-list"></div>` : ''} `; results.users.forEach(user => { const userEl = document.createElement('div'); userEl.className = 'search-result-user'; userEl.dataset.userId = user.userId; const pfpUrl = sanitizeHTML(user.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${user.username}`; userEl.innerHTML = `<img src="${pfpUrl}" class="pfp pfp-sm"><div><div>${sanitizeHTML(user.displayName)} ${String(user.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</div><div style="color:var(--secondary-text-color)">@${sanitizeHTML(user.username)}</div></div>`; document.getElementById('search-users-list').appendChild(userEl); }); results.posts.forEach(post => { const postEl = document.createElement('div'); postEl.className = 'search-result-post'; postEl.innerHTML = `<b>${sanitizeHTML(post.displayName)}:</b> ${sanitizeHTML(post.postContent.replace(/<[^>]*>/g, ' ')).substring(0, 100)}...`; document.getElementById('search-posts-list').appendChild(postEl); }); },
+                renderImagePreview() { const container = document.getElementById('post-image-preview-container'); if (state.postImageUrl) { container.innerHTML = ` <img id="post-image-preview" src="${sanitizeHTML(state.postImageUrl)}" alt="Image Preview"> <button id="remove-image-btn" title="Remove Image">&times;</button> `; container.classList.remove('hidden'); } else { container.innerHTML = ''; container.classList.add('hidden'); } },
+                showFeedSkeleton(container) { const skeletonHTML = Array(3).fill().map(() => `<div class="post skeleton"><div class="post-header"><div class="pfp pfp-sm"></div><div class="post-display-name"></div></div><div class="post-content"></div></div>`).join(''); container.innerHTML = skeletonHTML; },
+                showProfileSkeleton() { document.getElementById('profile-content').innerHTML = ` <div class="profile-header skeleton"> <div class="profile-grid"> <div class="pfp pfp-lg"></div> <div class="profile-info"> <div class="profile-username" style="width: 60%; height: 28px; margin-bottom: 15px; border-radius: 4px;"></div> <div class="profile-actions-ig" style="display: flex; gap: 8px; flex-wrap: wrap;"><div style="width: 100%; height: 32px; background-color: var(--border-color); border-radius: 10px;"></div></div> <div class="profile-stats-ig" style="margin-top: 15px; display: flex; gap: 40px;"><div class="stat" style="width: 30%; height: 32px;"></div><div class="stat" style="width: 30%; height: 32px;"></div><div class="stat" style="width: 30%; height: 32px;"></div></div> </div> </div> <div class="profile-display-name-bio" style="padding: 0 16px;"> <div class="profile-display-name-ig" style="width: 40%; height: 20px; margin-bottom: 5px; border-radius: 4px;"></div> <div class="profile-description-ig" style="width: 80%; height: 48px; border-radius: 4px;"></div> </div> </div>`; this.showFeedSkeleton(document.getElementById('profile-feed')); },
+                toggleModal(modalName, show, position = null) {
+                    const modal = modals[modalName];
+                    if (!modal) return;
+                    
+                    modal.classList.toggle('hidden', !show);
+
+                    const modalContent = modal.querySelector('.modal-content');
+                    if (modalContent) {
+                        if (show && position) {
+                            modalContent.style.top = position.top ? `${position.top}px` : 'auto';
+                            modalContent.style.bottom = position.bottom ? `${position.bottom}px` : 'auto';
+                            modalContent.style.left = position.left ? `${position.left}px` : 'auto';
+                            modalContent.style.right = position.right ? `${position.right}px` : 'auto';
+                        } else if (!show) {
+                            modalContent.removeAttribute('style');
+                        }
+                    }
+                    
+                    if(show === false && modalName === 'report') {
+                        state.reporting = { userId: null, postId: null };
+                        document.getElementById('report-reason-input').value = '';
+                    }
+                },
+                renderProfileShortcutModal() {
+                    const user = state.currentUser;
+                    if (!user) return;
+                    const modalContent = modals.profileShortcut.querySelector('.modal-content');
+                    modalContent.innerHTML = `
+                        <button data-action="go-to-profile" data-user-id="${user.userId}">
+                             <span class="material-symbols-rounded">account_circle</span>
+                             View Profile
+                        </button>
+                        <button data-action="go-to-settings">
+                            <span class="material-symbols-rounded">settings</span>
+                            Settings
+                        </button>
+                    `;
+                },
+                renderSettingsPage() {
+                    const user = state.currentUser;
+                    const pfpUrl = sanitizeHTML(user.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${user.username}`;
+                    const isVerified = String(user.isVerified).toUpperCase() === 'TRUE';
+                    document.getElementById('settings-user-info-row').innerHTML = `
+                        <a id="settings-profile-link" data-user-id="${user.userId}" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; flex-grow: 1; cursor: pointer;">
+                            <img src="${pfpUrl}" class="pfp pfp-sm">
+                            <div class="user-info">
+                                <div class="display-name">${sanitizeHTML(user.displayName)} ${isVerified ? VERIFIED_SVG : ''}</div>
+                                <div class="username">@${sanitizeHTML(user.username)}</div>
+                            </div>
+                        </a>`;
+                    document.getElementById('post-visibility-select').value = state.currentUser.postVisibility || 'Everyone';
+                    document.getElementById('privacy-switch').checked = state.currentUser.profilePrivacy === 'private';
+
+                    const blockedListContainer = document.getElementById('blocked-users-list');
+                    if (state.blockedUsersList && state.blockedUsersList.length > 0) {
+                        blockedListContainer.innerHTML = state.blockedUsersList.map(blockedUser => {
+                            const pfp = sanitizeHTML(blockedUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${blockedUser.displayName}`;
+                            return `
+                                <div class="blocked-user-row setting-row">
+                                    <img src="${pfp}" class="pfp pfp-sm" style="cursor:default;">
+                                    <span class="blocked-user-info">${sanitizeHTML(blockedUser.displayName)}</span>
+                                    <button class="secondary unblock-btn" data-action="unblock-user" data-user-id="${blockedUser.userId}">Unblock</button>
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                        blockedListContainer.innerHTML = '<p style="color: var(--secondary-text-color); font-size: 14px; padding: 8px 0;">You haven\'t blocked anyone.</p>';
+                    }
+                },
+                showError(elId, msg) { const el = document.getElementById(elId); el.textContent = msg; el.classList.remove('hidden'); },
+                hideError(elId) { document.getElementById(elId).classList.add('hidden'); },
+                setButtonState(btnId, text, disabled) { const btn = document.getElementById(btnId); if(btn) { btn.textContent = text; btn.disabled = disabled; } },
+                renderMessagesPage() { this.renderConversationsList(); if (state.currentConversation.otherUserId) { this.renderConversationHistory(); } else { document.getElementById('conversation-view').innerHTML = ` <div id="conversation-placeholder"> <span class="material-symbols-rounded">chat</span> <h3>Your Messages</h3> <p>Select a conversation to start chatting.</p> </div>`; } },
+                renderConversationsList() { const container = document.getElementById('conversations-list'); if (state.conversations.length === 0) { container.innerHTML = '<p style="text-align: center; color: var(--secondary-text-color); padding: 15px;">No conversations yet.</p>'; return; } container.innerHTML = state.conversations.map(convo => { const isActive = convo.otherUser.userId === state.currentConversation.otherUserId; const pfp = sanitizeHTML(convo.otherUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${convo.otherUser.displayName}`; return ` <div class="conversation-item ${isActive ? 'active' : ''}" data-user-id="${convo.otherUser.userId}"> <img src="${pfp}" class="pfp pfp-sm"> <div class="convo-details"> <div class="username">${sanitizeHTML(convo.otherUser.displayName)}</div> <div class="last-message">${sanitizeHTML(convo.lastMessage)}</div> </div> ${convo.unreadCount > 0 ? '<div class="unread-dot"></div>' : ''} </div> `; }).join(''); },
+                renderConversationHistory() { const conversationView = document.getElementById('conversation-view'); const otherUser = state.conversations.find(c => c.otherUser.userId === state.currentConversation.otherUserId)?.otherUser; if (!otherUser) { conversationView.innerHTML = `<div id="conversation-placeholder"><p>Could not load conversation.</p></div>`; return; } const pfp = sanitizeHTML(otherUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${otherUser.displayName}`; conversationView.innerHTML = ` <div id="conversation-header"> <button id="back-to-convos-btn"><span class="material-symbols-rounded">arrow_back_ios_new</span></button> <a href="#" class="profile-link" data-user-id="${otherUser.userId}"> <img src="${pfp}" class="pfp pfp-sm"> <span>${sanitizeHTML(otherUser.displayName)} ${String(otherUser.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</span> </a> </div> <div id="messages-list"> ${state.currentConversation.messages.map(msg => this.createMessageBubble(msg)).join('')} </div> <form id="message-input-form"> <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" required> <button type="submit" class="primary">Send</button> </form> `; const messagesList = document.getElementById('messages-list'); if (messagesList) { messagesList.scrollTop = messagesList.scrollHeight; setTimeout(() => messagesList.scrollTop = messagesList.scrollHeight, 100); } },
+                createMessageBubble(message) { const isSent = message.senderId === state.currentUser.userId; let statusHTML = ''; let wrapperContent = ''; if (isSent) { if (message.status === 'sent') { statusHTML = '<div class="message-status">Sent</div>'; } else if (message.status === 'sending') { statusHTML = '<div class="message-status">Sending...</div>'; } else if (message.status === 'failed') { statusHTML = '<div class="message-status error">Failed to send</div>'; } const optionsMenuHTML = ` <div class="message-options"> <button class="options-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button> <div class="options-menu hidden"> <button class="delete-btn" data-action="delete-message" data-message-id="${message.messageId}">Unsend</button> </div> </div> `; wrapperContent = ` <div class="message-bubble sent">${sanitizeHTML(message.messageContent)}</div> ${optionsMenuHTML} `; } else { wrapperContent = `<div class="message-bubble received">${sanitizeHTML(message.messageContent)}</div>`; } return ` <div class="message-wrapper ${isSent ? 'sent' : 'received'}" data-message-id="${message.messageId}"> ${wrapperContent} </div> ${isSent ? statusHTML : ''} `; },
+            };
+
+            const handlers = {
+                async login() { ui.hideError('login-error'); const [username, password] = [document.getElementById('login-username').value.trim(), document.getElementById('login-password').value.trim()]; if (!username || !password) return ui.showError('login-error', 'All fields required.'); ui.setButtonState('login-btn', 'Logging In...', true); try { const { user } = await api.call('login', { username, password }); state.currentUser = user; localStorage.setItem('currentUser', JSON.stringify(user)); await core.initializeApp(); } catch (e) { if (e.message === 'ACCOUNT_BANNED') { core.logout(false); ui.renderBanPage(e.banDetails); core.navigateTo('suspended'); } else if (e.message === 'SERVER_OUTAGE') { core.logout(false); core.navigateTo('outage'); } else { ui.showError('login-error', e.message); } } finally { ui.setButtonState('login-btn', 'Log In', false); } },
+                async register() {
+                    ui.hideError('register-error');
+                    const [username, displayName, password] = [document.getElementById('register-username').value.trim(), document.getElementById('register-displayname').value.trim(), document.getElementById('register-password').value.trim()];
+                    const tosChecked = document.getElementById('register-tos').checked;
+
+                    if (!tosChecked) return ui.showError('register-error', 'You must agree to the Terms of Service.');
+                    if (!username || !displayName || !password) return ui.showError('register-error', 'All fields required.');
+                    if (password.length < 4) return ui.showError('register-error', 'Password must be at least 4 characters long.');
+                    
+                    const usernameRegex = /^[a-zA-Z0-9_.]+$/;
+                    if (!usernameRegex.test(username)) {
+                        return ui.showError('register-error', 'Username can only contain letters, numbers, dots, and underscores.');
+                    }
+
+                    ui.setButtonState('register-btn', 'Signing Up...', true);
+                    try {
+                        const { user } = await api.call('register', { username, displayName, password });
+                        state.currentUser = user;
+                        localStorage.setItem('currentUser', JSON.stringify(user));
+                        await core.initializeApp();
+                    } catch (e) {
+                        ui.showError('register-error', e.message);
+                    } finally {
+                        ui.setButtonState('register-btn', 'Sign Up', false);
+                    }
+                },
+                async createPost() { const contentInput = document.getElementById('post-content-input'); let postContent = sanitizeHTML(contentInput.value.trim()); const imageUrl = state.postImageUrl; if (!postContent && !imageUrl && !state.editingPostId) return; if (imageUrl) { postContent += `<br><img src="${sanitizeHTML(imageUrl)}" alt="user image">`; } const isUpdating = !!state.editingPostId; const button = document.getElementById('submit-post-btn'); const originalButtonText = isUpdating ? 'Save Changes' : 'Post'; ui.setButtonState(button.id, 'Saving...', true); try { if (isUpdating) { await api.call('updatePost', { userId: state.currentUser.userId, postId: state.editingPostId, postContent: postContent }); } else { const postType = document.getElementById('post-type-select').value; const isStory = postType.startsWith('story'); const storyDuration = isStory ? parseInt(postType.split('-')[1]) : 0; await api.call('createPost', { userId: state.currentUser.userId, postContent, isStory, storyDuration }); } contentInput.value = ''; state.postImageUrl = null; state.editingPostId = null; ui.renderImagePreview(); button.textContent = 'Post'; document.getElementById('post-type-select').value = 'regular'; await core.refreshFeed(false); } catch (e) { alert(`Error: ${e.message}`); } finally { ui.setButtonState(button.id, originalButtonText, false); if (isUpdating) { button.textContent = 'Post'; state.editingPostId = null; } } },
+                enterEditMode(postId) { const post = state.posts.find(p => p.postId === postId); if (!post) return; const textContent = post.postContent.replace(/<br><img src=".*?" alt=".*?">/g, '').trim(); document.getElementById('post-content-input').value = textContent; document.getElementById('submit-post-btn').textContent = 'Save Changes'; state.editingPostId = postId; window.scrollTo({ top: 0, behavior: 'smooth' }); document.getElementById('post-content-input').focus(); },
+                async addComment(postId, commentText) { if (!commentText.trim()) return; const tempComment = { commentId: `temp_${Date.now()}`, userId: state.currentUser.userId, displayName: state.currentUser.displayName, isVerified: state.currentUser.isVerified, commentText: commentText }; const postIndex = state.posts.findIndex(p => p.postId === postId); if (postIndex > -1) { state.posts[postIndex].comments.push(tempComment); ui.render(); } try { await api.call('addComment', { postId, userId: state.currentUser.userId, commentText }); await core.refreshFeed(false); } catch (e) { alert(`Error: ${e.message}`); const pIndex = state.posts.findIndex(p => p.postId === postId); if(pIndex > -1) { state.posts[pIndex].comments = state.posts[pIndex].comments.filter(c => c.commentId !== tempComment.commentId); ui.render(); }}},
+                async toggleLike(postId) { const post = state.posts.find(p => p.postId === postId); if (!post) return; const likeIndex = post.likes.findIndex(l => l.userId === state.currentUser.userId); if (likeIndex > -1) post.likes.splice(likeIndex, 1); else post.likes.push({ userId: state.currentUser.userId }); ui.render(); try { await api.call('toggleLike', { postId, userId: state.currentUser.userId }); } catch (e) { if (likeIndex > -1) post.likes.push({ userId: state.currentUser.userId }); else post.likes.pop(); ui.render(); alert(`Error: ${e.message}`); }},
+                async updateProfile() { ui.hideError('edit-profile-error'); const [displayName, pfpUrl, description] = [document.getElementById('edit-display-name').value, document.getElementById('edit-pfp-url').value, document.getElementById('edit-description').value]; ui.setButtonState('save-profile-btn', 'Saving...', true); try { await api.call('updateProfile', { userId: state.currentUser.userId, displayName, profilePictureUrl: pfpUrl, description }); state.currentUser = { ...state.currentUser, displayName, profilePictureUrl: pfpUrl, description }; localStorage.setItem('currentUser', JSON.stringify(state.currentUser)); await core.refreshFeed(false); await handlers.showProfile(state.currentUser.userId); } catch (e) { ui.showError('edit-profile-error', e.message); } finally { ui.setButtonState('save-profile-btn', 'Save Changes', false); }},
+                async deletePost(postId) { if (!confirm("Delete this post?")) return; const postToDeleteIndex = state.posts.findIndex(p => p.postId === postId); if (postToDeleteIndex === -1) return; const postToDelete = state.posts[postToDeleteIndex]; state.posts.splice(postToDeleteIndex, 1); ui.render(); try { await api.call('deletePost', { postId, userId: state.currentUser.userId }); } catch(e) { alert(`Error: Could not delete post. ${e.message}`); state.posts.splice(postToDeleteIndex, 0, postToDelete); ui.render(); } },
+                async deleteComment(commentId) { if (!confirm("Delete this comment?")) return; let postIndex = -1, commentIndex = -1, commentToDelete = null; for (let i = 0; i < state.posts.length; i++) { const foundIndex = state.posts[i].comments.findIndex(c => c.commentId === commentId); if (foundIndex !== -1) { postIndex = i; commentIndex = foundIndex; commentToDelete = state.posts[i].comments[foundIndex]; break; } } if (postIndex === -1) return; state.posts[postIndex].comments.splice(commentIndex, 1); ui.render(); try { await api.call('deleteComment', { commentId, userId: state.currentUser.userId }); } catch(e) { alert(`Error: Could not delete comment. ${e.message}`); state.posts[postIndex].comments.splice(commentIndex, 0, commentToDelete); ui.render(); } },
+                async toggleFollow(followingId) { const followBtn = document.getElementById('follow-btn'); if (!followBtn) return; followBtn.disabled = true; try { const result = await api.call('toggleFollow', { followerId: state.currentUser.userId, followingId }); state.profileUser.relationship = result.newRelationship; const { user } = await api.call('getUserProfile', { userId: followingId, currentUserId: state.currentUser.userId }, 'GET'); state.profileUser = user; const isNowFollowing = result.newRelationship === 'Following' || result.newRelationship === 'Friends'; if (isNowFollowing) { if(!state.currentUserFollowingList.includes(followingId)) state.currentUserFollowingList.push(followingId); } else { state.currentUserFollowingList = state.currentUserFollowingList.filter(id => id !== followingId); } } catch (e) { alert(`Error: ${e.message}`); } finally { ui.renderProfilePage(); } },
+                async search(query) { const container = document.getElementById('search-results'); container.innerHTML = '<p style="text-align:center; color: var(--secondary-text-color);">Searching...</p>'; try { const results = await api.call('search', { query, currentUserId: state.currentUser.userId }, 'GET'); ui.renderSearchResults(results); } catch(e) { container.innerHTML = `<p class="error-message">Search failed: ${e.message}</p>`; }},
+                async showProfile(userId, scrollToPostId = null) {
+                    if (state.currentView !== 'profile') { state.feedScrollPosition = window.scrollY; }
+                    state.scrollToPostId = scrollToPostId;
+                    core.navigateTo('profile');
+                    
+                    if (userId === state.currentUser.userId) {
+                        state.profileUser = state.currentUser;
+                        ui.renderProfilePage();
+                        return; 
+                    }
+
+                    ui.showProfileSkeleton();
+                    try {
+                        const { user } = await api.call('getUserProfile', { userId, currentUserId: state.currentUser.userId }, 'GET');
+                        if (state.currentView === 'profile') { state.profileUser = user; ui.renderProfilePage(); }
+                    } catch (e) {
+                        console.error("Failed to load profile:", e);
+                        document.getElementById('profile-content').innerHTML = `<p class="error-message" style="text-align:center;">Could not load profile: ${e.message}</p>`;
+                        document.getElementById('profile-feed').innerHTML = '';
+                        if(e.message === "User not found") { setTimeout(() => core.navigateTo('feed'), 1500); }
+                    }
+                },
+                async blockUser(userIdToBlock) {
+                    if (userIdToBlock === state.currentUser.userId) return;
+                    const userToBlock = state.posts.find(p => p.userId === userIdToBlock) || state.profileUser || state.blockedUsersList.find(u => u.userId === userIdToBlock);
+                    const userName = userToBlock ? userToBlock.displayName : 'this user';
+                    if (confirm(`Are you sure you want to block ${userName}? You will no longer see their posts, comments, or profile, and they will not see yours.`)) {
+                        try {
+                            await api.call('blockUser', { blockerId: state.currentUser.userId, blockedId: userIdToBlock });
+                            alert(`${userName} has been blocked.`);
+                            await core.refreshFeed(true);
+                            if (state.currentView === 'profile' && state.profileUser && state.profileUser.userId === userIdToBlock) {
+                                core.navigateTo('feed');
+                            }
+                        } catch (e) { alert(`Error: Could not block user. ${e.message}`); }
+                    }
+                },
+                async unblockUser(userIdToUnblock, event) {
+                    const unblockBtn = event.target.closest('.unblock-btn');
+                    const userToUnblock = state.blockedUsersList.find(u => u.userId === userIdToUnblock);
+                    if (!userToUnblock || !unblockBtn) return;
+                    
+                    unblockBtn.disabled = true;
+                    unblockBtn.textContent = 'Unblocking...';
+
+                    try {
+                        await api.call('blockUser', { blockerId: state.currentUser.userId, blockedId: userIdToUnblock });
+                        state.blockedUsersList = state.blockedUsersList.filter(u => u.userId !== userIdToUnblock);
+                        ui.renderSettingsPage();
+                    } catch(e) {
+                        alert(`Error unblocking user: ${e.message}`);
+                        unblockBtn.disabled = false;
+                        unblockBtn.textContent = 'Unblock';
+                    }
+                },
+                openReportModal(userId, postId = null) {
+                    state.reporting = { userId, postId };
+                    const user = state.posts.find(p => p.userId === userId) || state.profileUser;
+                    const title = document.getElementById('report-modal-title');
+                    title.textContent = postId ? `Report post by ${user.displayName}` : `Report ${user.displayName}`;
+                    ui.toggleModal('report', true);
+                },
+                async submitReport() {
+                    const reason = document.getElementById('report-reason-input').value.trim();
+                    if (!reason) { alert('Please provide a reason for the report.'); return; }
+                    ui.setButtonState('submit-report-btn', 'Submitting...', true);
+                    try {
+                        await api.call('reportUser', { reporterId: state.currentUser.userId, reportedId: state.reporting.userId, postId: state.reporting.postId, reason: reason });
+                        alert('Report submitted successfully. Thank you for helping keep Kangaroo safe.');
+                        ui.toggleModal('report', false);
+                    } catch (e) { alert(`Error: Could not submit report. ${e.message}`); } 
+                    finally { ui.setButtonState('submit-report-btn', 'Submit Report', false); }
+                },
+                showHashtagFeed(tag) { if (state.currentView !== 'hashtagFeed') { state.feedScrollPosition = window.scrollY; } core.navigateTo('hashtagFeed'); const titleEl = document.getElementById('hashtag-title'); const feedEl = document.getElementById('hashtag-feed'); const fullHashtag = `#${tag.toLowerCase()}`; titleEl.textContent = `Posts tagged with ${fullHashtag}`; const filteredPosts = state.posts.filter(post => (post.postContent || '').toLowerCase().includes(fullHashtag) ); ui.renderFeed(filteredPosts, feedEl, false); },
+                async showNotifications() { ui.toggleModal('notifications', true); ui.renderNotifications(); if(state.unreadNotificationCount > 0) { state.unreadNotificationCount = 0; core.updateNotificationDot(); try { await api.call('markNotificationsAsRead', { userId: state.currentUser.userId }); } catch (e) { console.error("Failed to mark notifications as read:", e); } } },
+                async deleteNotification(notificationId) { state.notifications = state.notifications.filter(n => n.notificationId !== notificationId); ui.renderNotifications(); try { await api.call('deleteNotification', { userId: state.currentUser.userId, notificationId }); } catch(e) { alert("Could not delete notification: " + e.message); core.refreshFeed(false); } },
+                async updatePostVisibility(e) {
+                    const newVisibility = e.target.value; const selectElement = e.target;
+                    selectElement.disabled = true;
+                    try {
+                        await api.call('updatePostVisibility', { userId: state.currentUser.userId, visibility: newVisibility });
+                        state.currentUser.postVisibility = newVisibility;
+                        localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
+                    } catch (err) {
+                        alert('Could not update setting: ' + err.message);
+                        selectElement.value = state.currentUser.postVisibility;
+                    } finally {
+                        selectElement.disabled = false;
+                    }
+                },
+                async updateProfilePrivacy(e) {
+                    const newPrivacy = e.target.checked ? 'private' : 'public'; const switchElement = e.target;
+                    switchElement.disabled = true;
+                    try {
+                        await api.call('updateProfilePrivacy', { userId: state.currentUser.userId, privacy: newPrivacy });
+                        state.currentUser.profilePrivacy = newPrivacy;
+                        localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
+                    } catch (err) {
+                        alert('Could not update setting: ' + err.message);
+                        switchElement.checked = state.currentUser.profilePrivacy === 'private';
+                    } finally {
+                        switchElement.disabled = false;
+                    }
+                },
+                async loadMessagesView() { core.navigateTo('messages'); ui.renderMessagesPage(); },
+                async loadConversation(otherUserId) {
+                    if (state.isConversationLoading) return;
+                    state.isConversationLoading = true;
+
+                    if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId);
+                    
+                    const convosListEl = document.getElementById('conversations-list');
+                    convosListEl.classList.add('is-loading');
+
+                    state.currentConversation.otherUserId = otherUserId;
+                    const convo = state.conversations.find(c => c.otherUser.userId === otherUserId);
+                    if (convo) convo.unreadCount = 0;
+                    core.updateMessageDot();
+                    document.querySelector('.messages-container').classList.add('show-chat-view');
+                    ui.renderMessagesPage();
+                    document.getElementById('conversation-view').innerHTML = '<div id="messages-list" style="display: flex; justify-content: center; align-items: center; height: 100%;"><p>Loading messages...</p></div>';
+                    try {
+                        const { messages } = await api.call('getConversationHistory', { userId: state.currentUser.userId, otherUserId }, 'GET');
+                        state.currentConversation.messages = messages.map(m => ({...m, status: 'sent'}));
+                        ui.renderConversationHistory();
+                        api.call('markConversationAsRead', { userId: state.currentUser.userId, otherUserId });
+                        state.messagePollingIntervalId = setInterval(() => handlers.pollNewMessages(otherUserId), 5000);
+                    } catch (e) {
+                        document.getElementById('conversation-view').innerHTML = `<div id="conversation-placeholder" class="error-message">Could not load conversation: ${e.message}</div>`;
+                    } finally {
+                        state.isConversationLoading = false;
+                        convosListEl.classList.remove('is-loading');
+                    }
+                },
+                async sendMessage() {
+                    const input = document.getElementById('message-input');
+                    const messageContent = input.value.trim();
+                    const otherUserId = state.currentConversation.otherUserId;
+                    if (!messageContent || !otherUserId) return;
+
+                    const tempId = `temp_${Date.now()}`;
+                    const tempMessage = { messageId: tempId, senderId: state.currentUser.userId, messageContent, status: 'sending' };
+
+                    input.value = '';
+                    input.disabled = true;
+                    document.querySelector('#message-input-form button').disabled = true;
+                    if (state.messagePollingIntervalId) {
+                        clearInterval(state.messagePollingIntervalId);
+                        state.messagePollingIntervalId = null;
+                    }
+
+                    state.currentConversation.messages.push(tempMessage);
+                    ui.renderConversationHistory();
+
+                    try {
+                        const { confirmedMessage } = await api.call('sendMessage', { senderId: state.currentUser.userId, recipientId: otherUserId, messageContent });
+                        const messageIndex = state.currentConversation.messages.findIndex(m => m.messageId === tempId);
+                        if (messageIndex > -1) {
+                            state.currentConversation.messages[messageIndex] = { ...confirmedMessage, status: 'sent' };
+                        } else {
+                            state.currentConversation.messages.push({ ...confirmedMessage, status: 'sent' });
+                        }
+                    } catch (e) {
+                        alert(`Error: ${e.message}`);
+                        const messageIndex = state.currentConversation.messages.findIndex(m => m.messageId === tempId);
+                        if (messageIndex > -1) {
+                            state.currentConversation.messages[messageIndex].status = 'failed';
+                        }
+                    } finally {
+                        ui.renderConversationHistory();
+                        const finalInput = document.getElementById('message-input');
+                        if (finalInput) { finalInput.disabled = false; finalInput.focus(); }
+                        const button = document.querySelector('#message-input-form button');
+                        if (button) button.disabled = false;
+                        
+                        if (state.currentView === 'messages' && state.currentConversation.otherUserId) {
+                            state.messagePollingIntervalId = setInterval(() => handlers.pollNewMessages(state.currentConversation.otherUserId), 5000);
+                        }
+                    }
+                },
+                async deleteMessage(messageId) { if (!confirm("Are you sure you want to unsend this message? This cannot be undone.")) return; const messageWrapper = document.querySelector(`.message-wrapper[data-message-id="${messageId}"]`); const messageStatus = document.querySelector(`.message-wrapper[data-message-id="${messageId}"] + .message-status`); if (!messageWrapper) return; messageWrapper.style.opacity = '0.5'; try { await api.call('deleteMessage', { userId: state.currentUser.userId, messageId }); const messageIndex = state.currentConversation.messages.findIndex(m => m.messageId === messageId); if (messageIndex > -1) { state.currentConversation.messages.splice(messageIndex, 1); } messageWrapper.remove(); if (messageStatus) messageStatus.remove(); } catch (e) { alert(`Error: Could not unsend message. ${e.message}`); messageWrapper.style.opacity = '1'; } },
+                async pollNewMessages(otherUserId, isForced = false) {
+                    if (state.currentView !== 'messages' || state.currentConversation.otherUserId !== otherUserId) {
+                        if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId);
+                        return;
+                    }
+                    try {
+                        const { messages } = await api.call('getConversationHistory', { userId: state.currentUser.userId, otherUserId }, 'GET');
+                        const pendingMessages = state.currentConversation.messages.filter(m => m.status === 'sending' || m.status === 'failed');
+                        const confirmedIds = new Set(messages.map(m => m.messageId));
+                        const uniquePending = pendingMessages.filter(pm => !confirmedIds.has(pm.messageId));
+
+                        const newMessages = [...messages.map(m => ({...m, status: 'sent'})), ...uniquePending];
+
+                        if (isForced || newMessages.length !== state.currentConversation.messages.length) {
+                            state.currentConversation.messages = newMessages;
+                            ui.renderConversationHistory();
+                            api.call('markConversationAsRead', { userId: state.currentUser.userId, otherUserId });
+                        }
+                    } catch (e) {
+                        console.error("Polling failed:", e.message);
+                    }
+                },
+                async startConversationFromProfile(otherUserId) { core.navigateTo('messages'); const existingConvo = state.conversations.find(c => c.otherUser.userId === otherUserId); if (!existingConvo && state.profileUser && state.profileUser.userId === otherUserId) { const newConvo = { otherUser: { userId: state.profileUser.userId, displayName: state.profileUser.displayName, profilePictureUrl: state.profileUser.profilePictureUrl, isVerified: state.profileUser.isVerified }, lastMessage: '', timestamp: new Date().toISOString(), unreadCount: 0 }; state.conversations.unshift(newConvo); } await handlers.loadConversation(otherUserId); },
+            };
+
+            const core = {
+                navigateTo(view) { 
+                    if (state.currentView === 'messages' && view !== 'messages') { if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId); state.messagePollingIntervalId = null; state.currentConversation.otherUserId = null; document.querySelector('.messages-container').classList.remove('show-chat-view'); }
+                    if (state.backgroundPosts) { state.posts = state.backgroundPosts; state.backgroundPosts = null; } 
+                    state.currentView = view; 
+                    ui.render(); 
+                    if(view === 'feed') { setTimeout(() => window.scrollTo(0, state.feedScrollPosition), 0); } 
+                    else { window.scrollTo(0, 0); }
+                },
+                async refreshFeed(showLoader = true) { 
+                    if (showLoader && state.currentView === 'feed') ui.showFeedSkeleton(document.getElementById('feed')); 
+                    try { 
+                        const [postsAndConvosResult, notificationsResult] = await Promise.all([
+                            api.call('getPosts', { userId: state.currentUser.userId }, 'GET'),
+                            api.call('getNotifications', { userId: state.currentUser.userId }, 'GET')
+                        ]);
+                        const { posts, conversations, currentUserFollowingList, currentUserFollowersList, blockedUsersList, currentUserData, bannerText } = postsAndConvosResult;
+                        const banner = document.getElementById('global-banner');
+                        const root = document.documentElement;
+                        if(bannerText) { banner.textContent = bannerText; banner.classList.remove('hidden'); setTimeout(() => { root.style.setProperty('--banner-height', `${banner.offsetHeight}px`); }, 0); } 
+                        else { banner.classList.add('hidden'); root.style.setProperty('--banner-height', '0px'); }
+                        
+                        if (currentUserData) {
+                            if (currentUserData.isSuspended === 'OUTAGE') { core.logout(false); return core.navigateTo('outage'); }
+                            if (currentUserData.banDetails) { ui.renderBanPage(currentUserData.banDetails); core.logout(false); return core.navigateTo('suspended'); }
+                            state.currentUser = currentUserData; 
+                            localStorage.setItem('currentUser', JSON.stringify(state.currentUser)); 
+
+                            const settingsBtn = document.getElementById('settings-btn');
+                            if (settingsBtn) {
+                                const pfpUrl = sanitizeHTML(state.currentUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${state.currentUser.username}`;
+                                settingsBtn.innerHTML = `<img src="${pfpUrl}" class="pfp pfp-sm">`;
+                            }
+                        } else { throw new Error("Could not validate user session."); }
+                        
+                        state.posts = posts;
+                        state.conversations = conversations;
+                        state.currentUserFollowingList = currentUserFollowingList;
+                        state.currentUserFollowersList = currentUserFollowersList;
+                        state.blockedUsersList = blockedUsersList || [];
+                        const { notifications } = notificationsResult;
+                        state.notifications = notifications;
+                        state.unreadNotificationCount = notifications.filter(n => !n.isRead || n.isRead === 'FALSE').length;
+                        this.updateNotificationDot();
+                        this.updateMessageDot();
+                    } catch(e) { 
+                        console.error("Feed refresh error:", e);
+                        if(state.currentView === 'feed') { document.getElementById('feed').innerHTML = `<p class="error-message">Could not load feed: ${e.message}</p>`; }
+                        if (e.message.includes("validate user session")) { setTimeout(() => core.logout(), 2000); }
+                    } finally { 
+                        if (['feed', 'profile', 'hashtagFeed', 'messages', 'settings'].includes(state.currentView)) ui.render(); 
+                    }
+                },
+                updateNotificationDot() { document.getElementById('notification-dot').style.display = state.unreadNotificationCount > 0 ? 'block' : 'none'; },
+                updateMessageDot() { const hasUnread = state.conversations.some(c => c.unreadCount > 0); document.getElementById('message-dot').style.display = hasUnread ? 'block' : 'none'; },
+                startStoryCountdownInterval() { if (state.storyUpdateIntervalId) clearInterval(state.storyUpdateIntervalId); state.storyUpdateIntervalId = setInterval(() => { document.querySelectorAll('.post-timestamp[data-is-story="true"]').forEach(el => { const post = { isStory: true, expiryTimestamp: el.dataset.timestamp }; const timeLeft = formatTimestamp(post); el.textContent = timeLeft; if (timeLeft === 'Expired') { el.closest('.post').style.display = 'none'; } }); }, 60000); },
+                logout(forceReload = true) { localStorage.removeItem('currentUser'); state.currentUser = null; if (state.backgroundRefreshIntervalId) clearInterval(state.backgroundRefreshIntervalId); if (state.storyUpdateIntervalId) clearInterval(state.storyUpdateIntervalId); if (state.banCountdownIntervalId) clearInterval(state.banCountdownIntervalId); if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId); state.backgroundRefreshIntervalId = null; state.storyUpdateIntervalId = null; state.banCountdownIntervalId = null; state.messagePollingIntervalId = null; if(forceReload) { window.location.reload(); } },
+                setupEventListeners() {
+                    let searchTimeout;
+                    document.getElementById('show-register-link').addEventListener('click', () => { document.getElementById('login-form').classList.add('hidden'); document.getElementById('register-form').classList.remove('hidden'); });
+                    document.getElementById('show-login-link').addEventListener('click', () => { document.getElementById('register-form').classList.add('hidden'); document.getElementById('login-form').classList.remove('hidden'); });
+                    document.getElementById('login-btn').addEventListener('click', handlers.login); document.getElementById('register-btn').addEventListener('click', handlers.register); document.getElementById('submit-post-btn').addEventListener('click', handlers.createPost); document.getElementById('save-profile-btn').addEventListener('click', handlers.updateProfile); 
+                    document.getElementById('logo-btn').addEventListener('click', () => core.navigateTo('feed'));
+                    document.getElementById('home-btn').addEventListener('click', () => core.navigateTo('feed'));
+                    document.getElementById('settings-btn').addEventListener('click', (e) => {
+                        ui.renderProfileShortcutModal();
+                        const btnRect = e.currentTarget.getBoundingClientRect();
+                        const position = {};
+                        const isMobile = window.innerWidth <= 768;
+
+                        if (isMobile) {
+                            position.bottom = (window.innerHeight - btnRect.top) + 8;
+                        } else {
+                            position.top = btnRect.bottom + 8;
+                        }
+                        position.right = window.innerWidth - btnRect.right;
+                        
+                        ui.toggleModal('profileShortcut', true, position);
+                    });
+                    document.getElementById('search-btn').addEventListener('click', () => ui.toggleModal('search', true));
+                    document.getElementById('notifications-btn').addEventListener('click', handlers.showNotifications);
+                    document.getElementById('messages-btn').addEventListener('click', () => handlers.loadMessagesView());
+                    document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => { 
+                        const modal = e.target.closest('.modal'); 
+                        if(modal) {
+                            const modalName = modal.id.replace('-modal', '').replace(/-(\w)/g, (match, p1) => p1.toUpperCase());
+                            ui.toggleModal(modalName, false); 
+                        }
+                    }));
+                    document.getElementById('logout-btn').addEventListener('click', core.logout);
+                    document.getElementById('suspended-logout-btn').addEventListener('click', core.logout);
+                    document.getElementById('outage-logout-btn').addEventListener('click', core.logout);
+                    document.getElementById('theme-switch').addEventListener('change', (e) => { const newTheme = e.target.checked ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', newTheme); localStorage.setItem('theme', newTheme); });
+                    document.getElementById('back-to-profile-btn').addEventListener('click', () => { handlers.showProfile(state.profileUser.userId) });
+                    document.getElementById('search-input').addEventListener('input', (e) => { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => handlers.search(e.target.value), 300); });
+                    document.getElementById('post-visibility-select').addEventListener('change', handlers.updatePostVisibility);
+                    document.getElementById('privacy-switch').addEventListener('change', handlers.updateProfilePrivacy);
+                    document.getElementById('add-image-btn').addEventListener('click', () => ui.toggleModal('imageUrl', true));
+                    document.getElementById('image-url-modal-done-btn').addEventListener('click', () => { const url = document.getElementById('image-url-modal-input').value.trim(); if (url) { state.postImageUrl = url; ui.renderImagePreview(); } document.getElementById('image-url-modal-input').value = ''; ui.toggleModal('imageUrl', false); });
+                    document.getElementById('register-tos').addEventListener('change', (e) => { document.getElementById('register-btn').disabled = !e.target.checked; });
+                    document.getElementById('submit-report-btn').addEventListener('click', handlers.submitReport);
+                    document.getElementById('create-post-form').addEventListener('click', (e) => { if (e.target.id === 'remove-image-btn') { state.postImageUrl = null; ui.renderImagePreview(); } });
+                    document.getElementById('notifications-list').addEventListener('click', (e) => { const item = e.target.closest('.notification-item'); if(!item) return; if(e.target.closest('.delete-notification-btn')) { handlers.deleteNotification(item.dataset.notificationId); return; } const clickableArea = e.target.closest('.notification-item-clickable'); if (clickableArea) { ui.toggleModal('notifications', false); const notification = state.notifications.find(n => n.notificationId === item.dataset.notificationId); if (!notification) return; if (notification.postAuthorId && notification.postId && notification.postId !== 'null') { handlers.showProfile(notification.postAuthorId, notification.postId); } else if (notification.actorUserId) { handlers.showProfile(notification.actorUserId); } } });
+                    document.getElementById('edit-profile-view').addEventListener('click', e => {
+                        const choice = e.target.closest('#pfp-choices-gallery img');
+                        if (choice) {
+                            document.getElementById('edit-pfp-url').value = choice.dataset.url;
+                            document.querySelectorAll('#pfp-choices-gallery img').forEach(img => img.classList.remove('selected'));
+                            choice.classList.add('selected');
+                        }
+                    });
+                    document.body.addEventListener('click', (e) => {
+                        const target = e.target;
+                        if (!modals.profileShortcut.classList.contains('hidden') && !target.closest('#profile-shortcut-modal .modal-content') && !target.closest('#settings-btn')) {
+                            ui.toggleModal('profileShortcut', false);
+                        }
+                        const optionsBtn = target.closest('.options-btn');
+                        if (optionsBtn) { e.preventDefault(); const menu = optionsBtn.nextElementSibling; const isHidden = menu.classList.contains('hidden'); document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden')); if (isHidden) menu.classList.remove('hidden'); return; }
+                        if (!target.closest('.options-menu')) { document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden')); }
+                        const actionButton = target.closest('[data-action]');
+                        if (actionButton) {
+                            const profileShortcutModal = target.closest('#profile-shortcut-modal');
+                            if (profileShortcutModal) {
+                                const action = actionButton.dataset.action;
+                                if (action === 'go-to-profile') {
+                                    e.preventDefault();
+                                    const userId = actionButton.dataset.userId;
+                                    ui.toggleModal('profileShortcut', false);
+                                    handlers.showProfile(userId);
+                                } else if (action === 'go-to-settings') {
+                                    e.preventDefault();
+                                    ui.toggleModal('profileShortcut', false);
+                                    core.navigateTo('settings');
+                                }
+                                return;
+                            }
+
+                            const action = actionButton.dataset.action;
+                            const postEl = actionButton.closest('.post');
+                            const commentEl = actionButton.closest('.comment');
+                            if (action === 'delete-post') handlers.deletePost(postEl.dataset.postId);
+                            else if (action === 'delete-comment') handlers.deleteComment(commentEl.dataset.commentId);
+                            else if (action === 'edit-post') handlers.enterEditMode(postEl.dataset.postId);
+                            else if (action === 'delete-message') handlers.deleteMessage(actionButton.dataset.messageId);
+                            else if (action === 'block-user') handlers.blockUser(actionButton.dataset.userId);
+                            else if (action === 'unblock-user') handlers.unblockUser(actionButton.dataset.userId, e);
+                            else if (action === 'report-post') handlers.openReportModal(postEl.dataset.userId, postEl.dataset.postId);
+                            else if (action === 'report-user') handlers.openReportModal(actionButton.dataset.userId);
+                            return;
+                        }
+                        
+                        if (target.closest('[data-nav="feed"]')) { e.preventDefault(); return core.navigateTo('feed'); }
+                        const hashtagLink = target.closest('.hashtag-link');
+                        if (hashtagLink) { e.preventDefault(); handlers.showHashtagFeed(hashtagLink.dataset.hashtag); return; }
+                        const profileLink = target.closest('.post-header, .comment-author, .search-result-user, #conversation-header .profile-link, #settings-profile-link');
+                        if (profileLink && !target.closest('.post-options')) {
+                             const userElement = profileLink.closest('[data-user-id]');
+                             if (userElement && userElement.dataset.userId) { ui.toggleModal('search', false); core.navigateTo('profile'); handlers.showProfile(userElement.dataset.userId); return; }
+                        }
+                        if (target.closest('#edit-profile-btn')) return core.navigateTo('editProfile');
+                        if (target.closest('#follow-btn')) return handlers.toggleFollow(state.profileUser.userId);
+                        const likeBtn = target.closest('.like-btn');
+                        if (likeBtn) return handlers.toggleLike(target.closest('.post').dataset.postId);
+                        if (target.closest('#message-user-btn')) return handlers.startConversationFromProfile(state.profileUser.userId);
+                        const conversationItem = target.closest('.conversation-item');
+                        if (conversationItem) { const otherUserId = conversationItem.dataset.userId; if (otherUserId && otherUserId !== state.currentConversation.otherUserId) { handlers.loadConversation(otherUserId); } return; }
+                        const backToConvosBtn = target.closest('#back-to-convos-btn');
+                        if (backToConvosBtn) { document.querySelector('.messages-container').classList.remove('show-chat-view'); if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId); state.messagePollingIntervalId = null; state.currentConversation.otherUserId = null; }
+                    });
+                    document.body.addEventListener('submit', (e) => { const commentForm = e.target.closest('.comment-form'); if(commentForm) { e.preventDefault(); const input = commentForm.querySelector('input'); handlers.addComment(e.target.closest('.post').dataset.postId, input.value); input.value = ''; } const messageForm = e.target.closest('#message-input-form'); if(messageForm) { e.preventDefault(); handlers.sendMessage(); } });
+                    document.getElementById('auth-view').addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; const activeForm = !document.getElementById('login-form').classList.contains('hidden') ? document.getElementById('login-form') : document.getElementById('register-form'); e.preventDefault(); const inputs = [...activeForm.querySelectorAll('input')]; const currentInputIndex = inputs.findIndex(input => input === document.activeElement); if (currentInputIndex > -1 && currentInputIndex < inputs.length - 1) { inputs[currentInputIndex + 1].focus(); } else { activeForm.querySelector('button.primary').click(); } });
+                },
+                async initializeApp() { const savedUser = JSON.parse(localStorage.getItem('currentUser')); if (!savedUser) { return core.navigateTo('auth'); } state.currentUser = savedUser; core.navigateTo('feed'); ui.showFeedSkeleton(document.getElementById('feed')); try { await core.refreshFeed(false); core.startStoryCountdownInterval(); } catch (error) { alert(`Session error: ${error.message}. Please log in again.`); core.logout(); } },
+                main() { core.setupEventListeners(); const savedTheme = localStorage.getItem('theme') || 'light'; document.documentElement.setAttribute('data-theme', savedTheme); document.getElementById('theme-switch').checked = savedTheme === 'dark'; if (localStorage.getItem('currentUser')) { core.initializeApp(); } else { core.navigateTo('auth'); } }
+            };
+            
+            const formatTimestamp = (post) => { const isoString = post.isStory ? post.expiryTimestamp : post.timestamp; if (!isoString) return ''; const date = new Date(isoString); const now = new Date(); if (post.isStory) { const diff = date - now; if (diff <= 0) return 'Expired'; const hours = Math.floor(diff / (1000 * 60 * 60)); const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)); return `${hours}h ${minutes}m left`; } const secondsAgo = Math.round((now - date) / 1000); if (secondsAgo < 60) return 'just now'; const minutesAgo = Math.round(secondsAgo / 60); if (minutesAgo < 60) return `${minutesAgo}m ago`; const hoursAgo = Math.round(minutesAgo / 60); if (hoursAgo < 24) return `${hoursAgo}h ago`; return date.toLocaleDateString('en-us', { month: 'short', day: 'numeric' }); };
+            const sanitizeHTML = (str) => { if (!str) return ''; const temp = document.createElement('div'); temp.textContent = str; return temp.innerHTML; };
+            core.main();
+        });
+    </script>
+</body>
+</html>
