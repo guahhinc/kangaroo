@@ -30,9 +30,21 @@
             --warning-color: #FFD54F; --button-hover-bg-color: #b17d65; --button-secondary-bg-color: #2a2a2a;
         }
         * { box-sizing: border-box; font-family: 'Inter Tight', -apple-system, sans-serif; }
-        html, body {
+        html {
+            height: 100%;
+        }
+        body {
             background-color: var(--primary-bg-color); color: var(--primary-text-color); margin: 0; padding: 0; 
             transition: background-color 0.3s, color 0.3s;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #app-wrapper {
+            flex-grow: 1;
+        }
+        .view.active {
+            flex-grow: 1;
         }
         body.logged-in { padding-top: calc(50px + env(safe-area-inset-top) + 20px + var(--banner-height)); transition: padding-top 0.3s ease-in-out, padding-bottom 0.3s ease-in-out; }
         .view { display: none; }
@@ -565,193 +577,195 @@
     </header>
 
     <div id="global-banner" class="hidden"></div>
-
-    <div id="auth-view" class="view">
-        <div class="container">
-            <img src="https://raw.githubusercontent.com/guahhinc/fire/main/Kangaroo.png" alt="Kangaroo Logo" class="logo">
-            <div id="auth-container">
-                <div id="login-form">
-                    <input type="text" id="login-username" placeholder="Username" autocomplete="username">
-                    <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
-                    <button id="login-btn" class="primary">Log In</button>
-                    <p id="login-error" class="error-message hidden"></p>
-                    <p>Don't have an account? <a id="show-register-link">Sign up</a></p>
-                </div>
-                <div id="register-form" class="hidden">
-                    <input type="text" id="register-username" placeholder="Username (no spaces)" autocomplete="username">
-                    <input type="text" id="register-displayname" placeholder="Display Name">
-                    <input type="password" id="register-password" placeholder="Password" autocomplete="new-password">
-                    <label class="form-group-tos">
-                        <input type="checkbox" id="register-tos">
-                        <span class="tos-checkmark"></span>
-                        <span class="tos-text">I agree to the <a href="https://sites.google.com/view/guahh/terms-of-service" target="_blank" rel="noopener noreferrer">Terms of Service and Privacy Policy</a>.</span>
-                    </label>
-                    <button id="register-btn" class="primary" disabled>Sign Up</button>
-                    <p id="register-error" class="error-message hidden"></p>
-                    <p>Have an account? <a id="show-login-link">Log in</a></p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="suspended-view" class="view">
-        <div class="container">
-            <span class="material-symbols-rounded warning-icon" style="font-size: 52px;">warning</span>
-            <h2>Account Banned</h2>
-            <div id="ban-details-container" style="max-width: 400px; margin: 20px auto; line-height: 1.6; text-align: left;">
-                <p style="text-align: center; margin-bottom: 20px;">Contact guahhinc@outlook.com for more info or appeal.</p>
-                <p style="font-weight: 600; text-align: center;">Reason:</p>
-                <p id="ban-reason" style="margin-top: 5px; background-color: var(--border-color); padding: 12px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; text-align: center;"></p>
-                <div id="ban-timer-container">
-                    <p style="margin-top: 20px; font-weight: 600; text-align: center;">Time remaining:</p>
-                    <p id="ban-countdown" style="font-size: 1.2em; font-weight: 700; margin-top: 5px; text-align: center;"></p>
-                </div>
-            </div>
-            <button id="suspended-logout-btn" class="secondary">Log Out</button>
-        </div>
-    </div>
-
-    <div id="outage-view" class="view">
-        <div class="container">
-            <span class="material-symbols-rounded warning-icon">warning</span>
-            <h2>Server Maintenance</h2>
-            <p>The server is currently undergoing maintenance, we'll be back soon.</p>
-            <button id="outage-logout-btn" class="secondary">Log Out</button>
-        </div>
-    </div>
-
-    <div id="main-app-view" class="view">
-        <div class="container">
-            <main>
-                <section id="create-post-form">
-                    <textarea id="post-content-input" placeholder="What's on your mind?"></textarea>
-                    <div id="post-image-preview-container" class="hidden"></div>
-                    <div class="create-post-options">
-                        <div class="create-post-left-actions">
-                            <select id="post-type-select">
-                                <option value="regular">Post</option>
-                                <option value="story-24">Story (24h)</option>
-                                <option value="story-12">Story (12h)</option>
-                            </select>
-                            <button id="add-image-btn" title="Add Image URL"><span class="material-symbols-rounded">add_photo_alternate</span></button>
-                        </div>
-                        <div class="create-post-actions">
-                            <button id="submit-post-btn" class="primary">Post</button>
-                        </div>
-                    </div>
-                </section>
-                <section id="feed"></section>
-            </main>
-        </div>
-    </div>
     
-    <div id="profile-page-view" class="view">
-        <div class="container"><a class="back-btn" data-nav="feed">&larr; Back to Feed</a><div id="profile-content"></div><div id="profile-feed"></div></div>
-    </div>
-
-    <div id="settings-view" class="view">
-        <div class="container">
-            <h2 style="margin-top: 20px;">Settings</h2>
-            <div class="settings-section">
-                <h4 class="settings-section-title">👤 Account</h4>
-                <div class="setting-row" id="settings-user-info-row"></div>
-                <div class="setting-row">
-                    <button id="logout-btn">Log Out</button>
-                </div>
-            </div>
-            <div class="settings-section">
-                <h4 class="settings-section-title">🔒 Privacy</h4>
-                <div class="setting-row">
-                    <div>
-                        <span>Private Profile</span>
-                        <p class="setting-description">Only friends can see your full profile.</p>
+    <div id="app-wrapper">
+        <div id="auth-view" class="view">
+            <div class="container">
+                <img src="https://raw.githubusercontent.com/guahhinc/fire/main/Kangaroo.png" alt="Kangaroo Logo" class="logo">
+                <div id="auth-container">
+                    <div id="login-form">
+                        <input type="text" id="login-username" placeholder="Username" autocomplete="username">
+                        <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+                        <button id="login-btn" class="primary">Log In</button>
+                        <p id="login-error" class="error-message hidden"></p>
+                        <p>Don't have an account? <a id="show-register-link">Sign up</a></p>
                     </div>
-                    <label class="switch"><input type="checkbox" id="privacy-switch"><span class="slider"></span></label>
-                </div>
-                <div class="setting-row">
-                    <div>
-                        <span>Who can see your posts</span>
-                        <p class="setting-description">Control who can see your posts and stories.</p>
+                    <div id="register-form" class="hidden">
+                        <input type="text" id="register-username" placeholder="Username (no spaces)" autocomplete="username" maxlength="25">
+                        <input type="text" id="register-displayname" placeholder="Display Name" maxlength="30">
+                        <input type="password" id="register-password" placeholder="Password" autocomplete="new-password">
+                        <label class="form-group-tos">
+                            <input type="checkbox" id="register-tos">
+                            <span class="tos-checkmark"></span>
+                            <span class="tos-text">I agree to the <a href="https://sites.google.com/view/guahh/terms-of-service" target="_blank" rel="noopener noreferrer">Terms of Service and Privacy Policy</a>.</span>
+                        </label>
+                        <button id="register-btn" class="primary" disabled>Sign Up</button>
+                        <p id="register-error" class="error-message hidden"></p>
+                        <p>Have an account? <a id="show-login-link">Log in</a></p>
                     </div>
-                    <select id="post-visibility-select" style="padding: 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--primary-bg-color); color: var(--primary-text-color);">
-                        <option value="Everyone">Everyone</option>
-                        <option value="Followers">Followers</option>
-                        <option value="Friends">Friends</option>
-                    </select>
                 </div>
             </div>
-            <div class="settings-section">
-                <h4 class="settings-section-title">🎨 Customisation</h4>
-                <div class="setting-row">
-                    <div>
-                        <span>Dark Mode</span>
-                        <p class="setting-description">Change the website theme.</p>
+        </div>
+
+        <div id="suspended-view" class="view">
+            <div class="container">
+                <span class="material-symbols-rounded warning-icon" style="font-size: 52px;">warning</span>
+                <h2>Account Banned</h2>
+                <div id="ban-details-container" style="max-width: 400px; margin: 20px auto; line-height: 1.6; text-align: left;">
+                    <p style="text-align: center; margin-bottom: 20px;">Contact guahhinc@outlook.com for more info or appeal.</p>
+                    <p style="font-weight: 600; text-align: center;">Reason:</p>
+                    <p id="ban-reason" style="margin-top: 5px; background-color: var(--border-color); padding: 12px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; text-align: center;"></p>
+                    <div id="ban-timer-container">
+                        <p style="margin-top: 20px; font-weight: 600; text-align: center;">Time remaining:</p>
+                        <p id="ban-countdown" style="font-size: 1.2em; font-weight: 700; margin-top: 5px; text-align: center;"></p>
                     </div>
-                    <label class="switch"><input type="checkbox" id="theme-switch"><span class="slider"></span></label>
+                </div>
+                <button id="suspended-logout-btn" class="secondary">Log Out</button>
+            </div>
+        </div>
+
+        <div id="outage-view" class="view">
+            <div class="container">
+                <span class="material-symbols-rounded warning-icon">warning</span>
+                <h2>Server Maintenance</h2>
+                <p>The server is currently undergoing maintenance, we'll be back soon.</p>
+                <button id="outage-logout-btn" class="secondary">Log Out</button>
+            </div>
+        </div>
+
+        <div id="main-app-view" class="view">
+            <div class="container">
+                <main>
+                    <section id="create-post-form">
+                        <textarea id="post-content-input" placeholder="What's on your mind?"></textarea>
+                        <div id="post-image-preview-container" class="hidden"></div>
+                        <div class="create-post-options">
+                            <div class="create-post-left-actions">
+                                <select id="post-type-select">
+                                    <option value="regular">Post</option>
+                                    <option value="story-24">Story (24h)</option>
+                                    <option value="story-12">Story (12h)</option>
+                                </select>
+                                <button id="add-image-btn" title="Add Image URL"><span class="material-symbols-rounded">add_photo_alternate</span></button>
+                            </div>
+                            <div class="create-post-actions">
+                                <button id="submit-post-btn" class="primary">Post</button>
+                            </div>
+                        </div>
+                    </section>
+                    <section id="feed"></section>
+                </main>
+            </div>
+        </div>
+        
+        <div id="profile-page-view" class="view">
+            <div class="container"><a class="back-btn" data-nav="feed">&larr; Back to Feed</a><div id="profile-content"></div><div id="profile-feed"></div></div>
+        </div>
+
+        <div id="settings-view" class="view">
+            <div class="container">
+                <h2 style="margin-top: 20px;">Settings</h2>
+                <div class="settings-section">
+                    <h4 class="settings-section-title">👤 Account</h4>
+                    <div class="setting-row" id="settings-user-info-row"></div>
+                    <div class="setting-row">
+                        <button id="logout-btn">Log Out</button>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h4 class="settings-section-title">🔒 Privacy</h4>
+                    <div class="setting-row">
+                        <div>
+                            <span>Private Profile</span>
+                            <p class="setting-description">Only friends can see your full profile.</p>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="privacy-switch"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <span>Who can see your posts</span>
+                            <p class="setting-description">Control who can see your posts and stories.</p>
+                        </div>
+                        <select id="post-visibility-select" style="padding: 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--primary-bg-color); color: var(--primary-text-color);">
+                            <option value="Everyone">Everyone</option>
+                            <option value="Followers">Followers</option>
+                            <option value="Friends">Friends</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h4 class="settings-section-title">🎨 Customisation</h4>
+                    <div class="setting-row">
+                        <div>
+                            <span>Dark Mode</span>
+                            <p class="setting-description">Change the website theme.</p>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="theme-switch"><span class="slider"></span></label>
+                    </div>
+                </div>
+                 <div class="settings-section">
+                    <h4 class="settings-section-title">🚫 Blocked Users</h4>
+                    <p class="setting-description" style="padding: 0 0 10px 0;">You won't see posts, profiles, or notifications from people you block.</p>
+                    <div id="blocked-users-list"></div>
                 </div>
             </div>
-             <div class="settings-section">
-                <h4 class="settings-section-title">🚫 Blocked Users</h4>
-                <p class="setting-description" style="padding: 0 0 10px 0;">You won't see posts, profiles, or notifications from people you block.</p>
-                <div id="blocked-users-list"></div>
+        </div>
+        
+        <div id="hashtag-feed-view" class="view">
+            <div class="container">
+                <a class="back-btn" data-nav="feed">&larr; Back to Feed</a>
+                <h2 id="hashtag-title" style="margin-top: 20px;"></h2>
+                <section id="hashtag-feed"></section>
             </div>
         </div>
-    </div>
-    
-    <div id="hashtag-feed-view" class="view">
-        <div class="container">
-            <a class="back-btn" data-nav="feed">&larr; Back to Feed</a>
-            <h2 id="hashtag-title" style="margin-top: 20px;"></h2>
-            <section id="hashtag-feed"></section>
-        </div>
-    </div>
 
-    <div id="search-view" class="view">
-        <div class="container">
-            <h2 style="margin-top: 20px;">Search</h2>
-            <input type="search" id="search-input" placeholder="Search for users or posts..." style="width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 20px;">
-            <div id="search-results"></div>
+        <div id="search-view" class="view">
+            <div class="container">
+                <h2 style="margin-top: 20px;">Search</h2>
+                <input type="search" id="search-input" placeholder="Search for users or posts..." style="width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 20px;">
+                <div id="search-results"></div>
+            </div>
         </div>
-    </div>
 
-    <div id="edit-profile-view" class="view">
-        <div class="container">
-            <a class="back-btn" id="back-to-profile-btn">&larr; Back to Profile</a>
-            <h2>Edit Profile</h2>
-            <div class="form-group">
-                <label for="edit-pfp-url">Profile Picture URL</label>
-                <input type="url" id="edit-pfp-url" placeholder="https://example.com/image.png">
-            </div>
-            <div class="form-group">
-                <label>Or choose an avatar:</label>
-                <div id="pfp-choices-gallery"></div>
-            </div>
-            <div class="form-group">
-                <label for="edit-display-name">Display Name</label>
-                <input type="text" id="edit-display-name">
-            </div>
-            <div class="form-group">
-                <label for="edit-description">Description</label>
-                <textarea id="edit-description"></textarea>
-            </div>
-            <div class="actions">
-                <button id="save-profile-btn" class="primary">Save Changes</button>
-            </div>
-            <p id="edit-profile-error" class="error-message hidden"></p>
-        </div>
-    </div>
-
-    <div id="messages-view" class="view">
-        <div class="container">
-            <div class="messages-container">
-                <div id="conversations-list">
-                    <!-- Header and list body will be injected here -->
+        <div id="edit-profile-view" class="view">
+            <div class="container">
+                <a class="back-btn" id="back-to-profile-btn">&larr; Back to Profile</a>
+                <h2>Edit Profile</h2>
+                <div class="form-group">
+                    <label for="edit-pfp-url">Profile Picture URL</label>
+                    <input type="url" id="edit-pfp-url" placeholder="https://example.com/image.png">
                 </div>
-                <div id="conversation-view">
-                    <div id="conversation-placeholder">
-                        <span class="material-symbols-rounded">chat</span>
-                        <h3>Your Messages</h3>
-                        <p>Select a conversation or start a new one.</p>
+                <div class="form-group">
+                    <label>Or choose an avatar:</label>
+                    <div id="pfp-choices-gallery"></div>
+                </div>
+                <div class="form-group">
+                    <label for="edit-display-name">Display Name</label>
+                    <input type="text" id="edit-display-name" maxlength="30">
+                </div>
+                <div class="form-group">
+                    <label for="edit-description">Description</label>
+                    <textarea id="edit-description"></textarea>
+                </div>
+                <div class="actions">
+                    <button id="save-profile-btn" class="primary">Save Changes</button>
+                </div>
+                <p id="edit-profile-error" class="error-message hidden"></p>
+            </div>
+        </div>
+
+        <div id="messages-view" class="view">
+            <div class="container">
+                <div class="messages-container">
+                    <div id="conversations-list">
+                        <!-- Header and list body will be injected here -->
+                    </div>
+                    <div id="conversation-view">
+                        <div id="conversation-placeholder">
+                            <span class="material-symbols-rounded">chat</span>
+                            <h3>Your Messages</h3>
+                            <p>Select a conversation or start a new one.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1378,18 +1392,35 @@
                 async login() { ui.hideError('login-error'); const [username, password] = [document.getElementById('login-username').value.trim(), document.getElementById('login-password').value.trim()]; if (!username || !password) return ui.showError('login-error', 'All fields required.'); ui.setButtonState('login-btn', 'Logging In...', true); try { const { user } = await api.call('login', { username, password }); state.currentUser = user; localStorage.setItem('currentUser', JSON.stringify(user)); await core.initializeApp(); } catch (e) { if (e.message === 'ACCOUNT_BANNED') { core.logout(false); ui.renderBanPage(e.banDetails); core.navigateTo('suspended'); } else if (e.message === 'SERVER_OUTAGE') { core.logout(false); core.navigateTo('outage'); } else { ui.showError('login-error', e.message); } } finally { ui.setButtonState('login-btn', 'Log In', false); } },
                 async register() {
                     ui.hideError('register-error');
-                    const [username, displayName, password] = [document.getElementById('register-username').value.trim(), document.getElementById('register-displayname').value.trim(), document.getElementById('register-password').value.trim()];
+                    const [username, displayName, password] = [
+                        document.getElementById('register-username').value.trim(),
+                        document.getElementById('register-displayname').value.trim(),
+                        document.getElementById('register-password').value.trim()
+                    ];
                     const tosChecked = document.getElementById('register-tos').checked;
+
                     if (!tosChecked) return ui.showError('register-error', 'You must agree to the Terms of Service.');
                     if (!username || !displayName || !password) return ui.showError('register-error', 'All fields required.');
                     if (password.length < 4) return ui.showError('register-error', 'Password must be at least 4 characters long.');
+                    if (username.length > 25) return ui.showError('register-error', 'Username cannot be longer than 25 characters.');
+                    if (displayName.length > 30) return ui.showError('register-error', 'Display Name cannot be longer than 30 characters.');
+
                     const usernameRegex = /^[a-zA-Z0-9_.]+$/;
-                    if (!usernameRegex.test(username)) { return ui.showError('register-error', 'Username can only contain letters, numbers, dots, and underscores.'); }
+                    if (!usernameRegex.test(username)) {
+                        return ui.showError('register-error', 'Username can only contain letters, numbers, dots, and underscores.');
+                    }
+
                     ui.setButtonState('register-btn', 'Signing Up...', true);
                     try {
                         const { user } = await api.call('register', { username, displayName, password });
-                        state.currentUser = user; localStorage.setItem('currentUser', JSON.stringify(user)); await core.initializeApp();
-                    } catch (e) { ui.showError('register-error', e.message); } finally { ui.setButtonState('register-btn', 'Sign Up', false); }
+                        state.currentUser = user;
+                        localStorage.setItem('currentUser', JSON.stringify(user));
+                        await core.initializeApp();
+                    } catch (e) {
+                        ui.showError('register-error', e.message);
+                    } finally {
+                        ui.setButtonState('register-btn', 'Sign Up', false);
+                    }
                 },
                 async createPost() { const contentInput = document.getElementById('post-content-input'); let postContent = sanitizeHTML(contentInput.value.trim()); const imageUrl = state.postImageUrl; if (!postContent && !imageUrl && !state.editingPostId) return; if (imageUrl) { postContent += `<br><img src="${sanitizeHTML(imageUrl)}" alt="user image">`; } const isUpdating = !!state.editingPostId; const button = document.getElementById('submit-post-btn'); const originalButtonText = isUpdating ? 'Save Changes' : 'Post'; ui.setButtonState(button.id, 'Saving...', true); try { if (isUpdating) { await api.call('updatePost', { userId: state.currentUser.userId, postId: state.editingPostId, postContent: postContent }); } else { const postType = document.getElementById('post-type-select').value; const isStory = postType.startsWith('story'); const storyDuration = isStory ? parseInt(postType.split('-')[1]) : 0; await api.call('createPost', { userId: state.currentUser.userId, postContent, isStory, storyDuration }); } contentInput.value = ''; state.postImageUrl = null; state.editingPostId = null; ui.renderImagePreview(); button.textContent = 'Post'; document.getElementById('post-type-select').value = 'regular'; await core.refreshFeed(false); } catch (e) { alert(`Error: ${e.message}`); } finally { ui.setButtonState(button.id, originalButtonText, false); if (isUpdating) { button.textContent = 'Post'; state.editingPostId = null; } } },
                 enterEditMode(postId) { const post = state.posts.find(p => p.postId === postId); if (!post) return; const textContent = post.postContent.replace(/<br><img src=".*?" alt=".*?">/g, '').trim(); document.getElementById('post-content-input').value = textContent; document.getElementById('submit-post-btn').textContent = 'Save Changes'; state.editingPostId = postId; window.scrollTo({ top: 0, behavior: 'smooth' }); document.getElementById('post-content-input').focus(); },
