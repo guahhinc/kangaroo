@@ -801,7 +801,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // ===== IMPORTANT: This URL MUST match your latest deployment =====
-            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOXn9MBgiLAWRkGmo1bHJibPv4eCwY9Dc0m01a4tuVXROuslra02uY8Bn1sDWmiv4Q/exec';
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby6RvV64Lwh3VejY9NmnWphNNFUYLTv4diFz12Demp6gMDwU6_ElxGSOukS8WgQ2B7D/exec';
 
             const pfpChoices = [
                 'https://img.freepik.com/free-psd/close-up-delicious-apple_23-2151868338.jpg?semt=ais_hybrid&w=740&q=80',
@@ -1049,7 +1049,27 @@
                     postDiv.querySelector('.post-content').innerHTML = this.formatPostContent(post.postContent);
                     return postDiv;
                 },
-                createCommentElement(comment) { const isAuthor = comment.userId === state.currentUser.userId; const optionsMenuHTML = `<div class="post-options"><button class="options-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button><div class="options-menu hidden"><button class="delete-btn" data-action="delete-comment">Delete Comment</button></div></div>`; return `<div class="comment" data-comment-id="${comment.commentId}" data-user-id="${comment.userId}"><div class="comment-text"><a class="comment-author">${sanitizeHTML(comment.displayName)} ${String(comment.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</a><span>${sanitizeHTML(comment.commentText)}</span></div>${isAuthor ? optionsMenuHTML : ''}</div>`; },
+                createCommentElement(comment) {
+                    const isAuthor = comment.userId === state.currentUser.userId;
+                    const isAdmin = state.currentUser.isAdmin;
+                    // Show options menu if the viewer is the author OR an admin
+                    const optionsMenuHTML = (isAuthor || isAdmin) 
+                        ? `<div class="post-options">
+                               <button class="options-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button>
+                               <div class="options-menu hidden">
+                                   <button class="delete-btn" data-action="delete-comment">Delete Comment</button>
+                               </div>
+                           </div>` 
+                        : '';
+
+                    return `<div class="comment" data-comment-id="${comment.commentId}" data-user-id="${comment.userId}">
+                                <div class="comment-text">
+                                    <a class="comment-author">${sanitizeHTML(comment.displayName)} ${String(comment.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</a>
+                                    <span>${sanitizeHTML(comment.commentText)}</span>
+                                </div>
+                                ${optionsMenuHTML}
+                            </div>`;
+                },
                 renderNotifications() { const container = document.getElementById('notifications-list'); if(state.notifications.length === 0) { container.innerHTML = '<p style="text-align: center; color: var(--secondary-text-color); padding: 20px 0;">No new notifications.</p>'; return; } container.innerHTML = ''; state.notifications.forEach(n => { const item = document.createElement('div'); item.className = 'notification-item'; item.dataset.notificationId = n.notificationId; item.dataset.actorId = n.actorUserId; item.dataset.postId = n.postId; let text = ''; switch(n.actionType) { case 'like': text = 'liked your post.'; break; case 'comment': text = 'commented on your post.'; break; case 'follow': text = 'started following you.'; break; } const pfpUrl = sanitizeHTML(n.actorProfilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${n.actorDisplayName}`; item.innerHTML = ` <div class="notification-item-clickable" style="display: flex; align-items: center; gap: 12px; flex-grow: 1;"> <img src="${pfpUrl}" class="pfp pfp-sm"> <div class="notification-text"> <span class="username">${sanitizeHTML(n.actorDisplayName)}</span> ${text} <div class="notification-timestamp">${formatTimestamp({timestamp: n.timestamp})}</div> </div> </div> <button class="delete-btn delete-notification-btn" title="Delete Notification"><span class="material-symbols-rounded">close</span></button> `; container.appendChild(item); }); },
                 renderSearchResults(results, containerId = 'search-results') { const container = document.getElementById(containerId); if (!results.users.length && !results.posts.length) { container.innerHTML = '<p style="text-align:center; color: var(--secondary-text-color);">No results found.</p>'; return; } container.innerHTML = ` ${results.users.length ? `<h3>Users</h3><div id="${containerId}-users-list"></div>` : ''} ${results.posts.length ? `<h3>Posts</h3><div id="${containerId}-posts-list"></div>` : ''} `; results.users.forEach(user => { const userEl = document.createElement('div'); userEl.className = 'search-result-user'; userEl.dataset.userId = user.userId; const pfpUrl = sanitizeHTML(user.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${user.username}`; userEl.innerHTML = `<img src="${pfpUrl}" class="pfp pfp-sm"><div><div>${sanitizeHTML(user.displayName)} ${String(user.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</div><div style="color:var(--secondary-text-color)">@${sanitizeHTML(user.username)}</div></div>`; document.getElementById(`${containerId}-users-list`).appendChild(userEl); }); results.posts.forEach(post => { const postEl = document.createElement('div'); postEl.className = 'search-result-post'; postEl.innerHTML = `<b>${sanitizeHTML(post.displayName)}:</b> ${sanitizeHTML(post.postContent.replace(/<[^>]*>/g, ' ')).substring(0, 100)}...`; document.getElementById(`${containerId}-posts-list`).appendChild(postEl); }); },
                 renderImagePreview() { const container = document.getElementById('post-image-preview-container'); if (state.postImageUrl) { container.innerHTML = ` <img id="post-image-preview" src="${sanitizeHTML(state.postImageUrl)}" alt="Image Preview"> <button id="remove-image-btn" title="Remove Image">&times;</button> `; container.classList.remove('hidden'); } else { container.innerHTML = ''; container.classList.add('hidden'); } },
