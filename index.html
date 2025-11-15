@@ -95,7 +95,7 @@
         .comments-section { padding: 12px 16px; border-top: 1px solid var(--border-color); }
         .comment { padding: 8px 0; }
         .comment-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .comment-header-main { display: flex; align-items: center; gap: 8px; flex-grow: 1; }
+        .comment-header-main { display: flex; align-items: center; gap: 8px; flex-grow: 1; cursor: pointer; }
         .comment-header-main .pfp { width: 24px; height: 24px; }
         .comment-author { font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; font-size: 14px; }
         .comment-timestamp { font-size: 13px; color: var(--secondary-text-color); }
@@ -105,6 +105,7 @@
         .comment-form button { border: none; background: none; color: var(--accent-color); font-weight: 600; }
         .post-options { position: relative; margin-left: auto; }
         .options-btn { background: none; border: none; cursor: pointer; color: var(--secondary-text-color); padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .options-btn .material-symbols-rounded { font-size: 24px; }
         .options-btn:hover { background-color: var(--border-color); color: var(--primary-text-color); }
         .options-menu { position: absolute; top: 100%; right: 0; background-color: var(--secondary-bg-color); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 12px var(--shadow-color); z-index: 10; min-width: 150px; overflow: hidden; display: flex; flex-direction: column; }
         .options-menu button { background: none; border: none; box-shadow: none; text-align: left; padding: 10px 15px; width: 100%; border-radius: 0; font-size: 14px; border-bottom: 1px solid var(--border-color); color: var(--primary-text-color); }
@@ -149,12 +150,9 @@
         .notification-text .username { font-weight: 600; }
         .notification-timestamp { font-size: 12px; color: var(--secondary-text-color); margin-top: 2px; }
         .delete-notification-btn { margin-left: auto; }
-        #search-modal .modal-content { max-width: 500px; }
-        #search-input { width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 20px; }
         #search-results h3 { margin: 20px 0 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
         .search-result-user { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 10px; cursor: pointer; }
         .search-result-user:hover { background-color: var(--border-color); }
-        .search-result-post { padding: 8px; border-radius: 10px; font-size: 14px; color: var(--secondary-text-color); }
         .profile-header {
             margin-bottom: 20px;
             position: relative;
@@ -456,7 +454,8 @@
                 border-bottom: none;
                 border-top: 1px solid var(--border-color);
                 padding-bottom: env(safe-area-inset-bottom);
-                height: 65px; 
+                height: calc(65px + env(safe-area-inset-bottom));
+                min-height: 65px;
                 align-items: flex-start;
                 padding-top: 8px;
             }
@@ -707,6 +706,14 @@
         </div>
     </div>
 
+    <div id="search-view" class="view">
+        <div class="container">
+            <h2 style="margin-top: 20px;">Search</h2>
+            <input type="search" id="search-input" placeholder="Search for users or posts..." style="width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 20px;">
+            <div id="search-results"></div>
+        </div>
+    </div>
+
     <div id="edit-profile-view" class="view">
         <div class="container">
             <a class="back-btn" id="back-to-profile-btn">&larr; Back to Profile</a>
@@ -749,10 +756,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <div id="search-modal" class="modal hidden">
-        <div class="modal-content"><div class="modal-header"><h2>Search</h2><button class="close-modal-btn"><span class="material-symbols-rounded">close</span></button></div><input type="search" id="search-input" placeholder="Search for users or posts..."><div id="search-results"></div></div>
     </div>
 
     <div id="notifications-modal" class="modal hidden">
@@ -899,7 +902,8 @@
                 isConversationLoading: false,
                 newChat: { selectedUsers: new Map() },
                 groupEdit: { membersToAdd: new Set(), membersToRemove: new Set() },
-                userProfileCache: {}
+                userProfileCache: {},
+                search: { query: '', results: null, isLoading: false }
             };
             
             const views = { 
@@ -907,11 +911,11 @@
                 profile: document.getElementById('profile-page-view'), editProfile: document.getElementById('edit-profile-view'), 
                 suspended: document.getElementById('suspended-view'), outage: document.getElementById('outage-view'), 
                 hashtagFeed: document.getElementById('hashtag-feed-view'), messages: document.getElementById('messages-view'),
-                settings: document.getElementById('settings-view')
+                settings: document.getElementById('settings-view'),
+                search: document.getElementById('search-view')
             };
 
             const modals = { 
-                search: document.getElementById('search-modal'), 
                 notifications: document.getElementById('notifications-modal'), 
                 imageUrl: document.getElementById('image-url-modal'), 
                 report: document.getElementById('report-modal'), 
@@ -950,7 +954,7 @@
             const ui = {
                 render() {
                     const header = document.querySelector('header');
-                    const isUserLoggedIn = ['feed', 'profile', 'editProfile', 'hashtagFeed', 'messages', 'settings'].includes(state.currentView);
+                    const isUserLoggedIn = ['feed', 'profile', 'editProfile', 'hashtagFeed', 'messages', 'settings', 'search'].includes(state.currentView);
                     header.classList.toggle('hidden', !isUserLoggedIn);
                     document.body.classList.toggle('logged-in', isUserLoggedIn);
                     Object.values(views).forEach(v => v.classList.remove('active'));
@@ -960,6 +964,7 @@
                     if (state.currentView === 'editProfile') this.renderEditProfilePage();
                     if (state.currentView === 'messages') this.renderMessagesPage();
                     if (state.currentView === 'settings') this.renderSettingsPage();
+                    if (state.currentView === 'search') this.renderSearchView();
                 },
                 renderBanPage(banDetails) { if (state.banCountdownIntervalId) clearInterval(state.banCountdownIntervalId); const reasonEl = document.getElementById('ban-reason'); const timerContainer = document.getElementById('ban-timer-container'); const countdownEl = document.getElementById('ban-countdown'); reasonEl.textContent = banDetails.reason || 'No reason provided.'; if (banDetails.endDate === 'permanent') { timerContainer.classList.add('hidden'); return; } timerContainer.classList.remove('hidden'); const endDate = new Date(banDetails.endDate); const updateCountdown = () => { const now = new Date(); const diff = endDate - now; if (diff <= 0) { countdownEl.textContent = 'Your ban has expired. You can now log out and log back in.'; clearInterval(state.banCountdownIntervalId); state.banCountdownIntervalId = null; return; } const days = Math.floor(diff / (1000 * 60 * 60 * 24)); const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)); const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)); let countdownText = ''; if (days > 0) countdownText += `${days}d `; if (hours > 0 || days > 0) countdownText += `${hours}h `; countdownText += `${minutes}m`; countdownEl.textContent = countdownText.trim(); }; updateCountdown(); state.banCountdownIntervalId = setInterval(updateCountdown, 1000); },
                 renderFeed(posts, container, isMainFeed = false) {
@@ -1096,8 +1101,13 @@
                         gallery.appendChild(img);
                     });
                 },
-                createPostElement(post) {
-                    const postDiv = document.createElement('div'); postDiv.className = 'post'; postDiv.dataset.postId = post.postId; postDiv.dataset.userId = post.userId;
+                createPostElement(post, options = {}) {
+                    const { showActions = true, showComments = true } = options;
+                    const postDiv = document.createElement('div');
+                    postDiv.className = 'post';
+                    postDiv.dataset.postId = post.postId;
+                    postDiv.dataset.userId = post.userId;
+                    
                     const isLiked = post.likes.some(like => like.userId === state.currentUser.userId);
                     const isAuthor = post.userId === state.currentUser.userId;
                     const isAdmin = state.currentUser.isAdmin;
@@ -1107,9 +1117,7 @@
                     if (isAuthor) {
                         authorSpecificButtons = `<button class="edit-btn" data-action="edit-post">Edit Post</button><button class="delete-btn" data-action="delete-post">Delete Post</button>`;
                     } else {
-                        // Base buttons for non-authors
                         authorSpecificButtons = `<button data-action="report-post">Report Post</button><button class="block-btn" data-action="block-user" data-user-id="${post.userId}">Block User</button>`;
-                        // Add admin-specific buttons
                         if (isAdmin) {
                             authorSpecificButtons += `<button class="delete-btn" data-action="delete-post">🛡️ Delete Post️</button>`;
                             authorSpecificButtons += `<button class="delete-btn" data-action="ban-user" data-user-id="${post.userId}">🛡️ Ban User️</button>`;
@@ -1117,7 +1125,24 @@
                     }
 
                     const optionsMenuHTML = `<div class="post-options"><button class="options-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button><div class="options-menu hidden">${authorSpecificButtons}</div></div>`;
-                    postDiv.innerHTML = `<div class="post-header"><img src="${pfpUrl}" class="pfp pfp-sm"><div class="post-header-info"><span class="post-display-name">${sanitizeHTML(post.displayName)} ${String(post.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</span><span class="post-timestamp" data-timestamp="${post.isStory ? post.expiryTimestamp : post.timestamp}" data-is-story="${post.isStory || false}">${formatTimestamp(post)}</span></div>${optionsMenuHTML}</div><div class="post-content"></div><div class="post-actions"><button class="like-btn ${isLiked ? 'liked' : ''}"><span class="material-symbols-rounded">favorite</span></button><span class="like-count">${post.likes.length} likes</span></div><div class="comments-section"><div class="comments-list">${[...post.comments].reverse().map(c => this.createCommentElement(c)).join('')}</div><form class="comment-form"><input type="text" placeholder="Add a comment..." required><button type="submit" class="primary">Post</button></form></div>`;
+
+                    postDiv.innerHTML = `
+                        <div class="post-header"><img src="${pfpUrl}" class="pfp pfp-sm"><div class="post-header-info"><span class="post-display-name">${sanitizeHTML(post.displayName)} ${String(post.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</span><span class="post-timestamp" data-timestamp="${post.isStory ? post.expiryTimestamp : post.timestamp}" data-is-story="${post.isStory || false}">${formatTimestamp(post)}</span></div>${optionsMenuHTML}</div>
+                        <div class="post-content"></div>
+                        ${showActions ? `
+                            <div class="post-actions">
+                                <button class="like-btn ${isLiked ? 'liked' : ''}"><span class="material-symbols-rounded">favorite</span></button>
+                                <span class="like-count">${post.likes.length} likes</span>
+                            </div>
+                        ` : ''}
+                        ${showComments ? `
+                            <div class="comments-section">
+                                <div class="comments-list">${[...post.comments].reverse().map(c => this.createCommentElement(c)).join('')}</div>
+                                <form class="comment-form"><input type="text" placeholder="Add a comment..." required><button type="submit" class="primary">Post</button></form>
+                            </div>
+                        ` : ''}
+                    `;
+                    
                     postDiv.querySelector('.post-content').innerHTML = this.formatPostContent(post.postContent);
                     return postDiv;
                 },
@@ -1136,7 +1161,7 @@
 
                     return `<div class="comment" data-comment-id="${comment.commentId}" data-user-id="${comment.userId}">
                                 <div class="comment-header">
-                                    <div class="comment-header-main">
+                                    <div class="comment-header-main" data-user-id="${comment.userId}">
                                         <img src="${pfpUrl}" class="pfp">
                                         <div>
                                             <a class="comment-author">${sanitizeHTML(comment.displayName)} ${String(comment.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</a>
@@ -1148,8 +1173,56 @@
                                 <div class="comment-text">${sanitizeHTML(comment.commentText)}</div>
                             </div>`;
                 },
+                renderSearchView() {
+                    const resultsContainer = document.getElementById('search-results');
+                    if (state.search.isLoading) {
+                        resultsContainer.innerHTML = '<p style="text-align:center; color: var(--secondary-text-color);">Searching...</p>';
+                        return;
+                    }
+                    if (state.search.results) {
+                        this.renderSearchResults(state.search.results);
+                    } else {
+                        resultsContainer.innerHTML = '<p style="text-align:center; color: var(--secondary-text-color);">Search for users and posts.</p>';
+                    }
+                },
+                renderSearchResults(results) {
+                    const container = document.getElementById('search-results');
+                    if (!results.users.length && !results.posts.length) {
+                        container.innerHTML = '<p style="text-align:center; color: var(--secondary-text-color);">No results found.</p>';
+                        return;
+                    }
+
+                    container.innerHTML = `
+                        ${results.users.length ? `<h3>Users</h3><div id="search-results-users-list"></div>` : ''}
+                        ${results.posts.length ? `<h3>Posts</h3><div id="search-results-posts-list"></div>` : ''}
+                    `;
+                    
+                    if (results.users.length) {
+                        const usersList = document.getElementById('search-results-users-list');
+                        results.users.forEach(user => {
+                            const userEl = document.createElement('div');
+                            userEl.className = 'search-result-user';
+                            userEl.dataset.userId = user.userId;
+                            const pfpUrl = sanitizeHTML(user.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${user.username}`;
+                            userEl.innerHTML = `<img src="${pfpUrl}" class="pfp pfp-sm"><div><div>${sanitizeHTML(user.displayName)} ${String(user.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</div><div style="color:var(--secondary-text-color)">@${sanitizeHTML(user.username)}</div></div>`;
+                            usersList.appendChild(userEl);
+                        });
+                    }
+
+                    if (results.posts.length) {
+                        const postsList = document.getElementById('search-results-posts-list');
+                        results.posts.forEach(post => {
+                            const fullPostObject = {
+                                ...state.userProfileCache[post.userId], 
+                                ...post,
+                                likes: [],
+                                comments: []
+                            };
+                            postsList.appendChild(this.createPostElement(fullPostObject, { showActions: false, showComments: false }));
+                        });
+                    }
+                },
                 renderNotifications() { const container = document.getElementById('notifications-list'); if(state.notifications.length === 0) { container.innerHTML = '<p style="text-align: center; color: var(--secondary-text-color); padding: 20px 0;">No new notifications.</p>'; return; } container.innerHTML = ''; state.notifications.forEach(n => { const item = document.createElement('div'); item.className = 'notification-item'; item.dataset.notificationId = n.notificationId; item.dataset.actorId = n.actorUserId; item.dataset.postId = n.postId; let text = ''; switch(n.actionType) { case 'like': text = 'liked your post.'; break; case 'comment': text = 'commented on your post.'; break; case 'follow': text = 'started following you.'; break; } const pfpUrl = sanitizeHTML(n.actorProfilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${n.actorDisplayName}`; item.innerHTML = ` <div class="notification-item-clickable" style="display: flex; align-items: center; gap: 12px; flex-grow: 1;"> <img src="${pfpUrl}" class="pfp pfp-sm"> <div class="notification-text"> <span class="username">${sanitizeHTML(n.actorDisplayName)}</span> ${text} <div class="notification-timestamp">${formatTimestamp({timestamp: n.timestamp})}</div> </div> </div> <button class="delete-btn delete-notification-btn" title="Delete Notification"><span class="material-symbols-rounded">close</span></button> `; container.appendChild(item); }); },
-                renderSearchResults(results, containerId = 'search-results') { const container = document.getElementById(containerId); if (!results.users.length && !results.posts.length) { container.innerHTML = '<p style="text-align:center; color: var(--secondary-text-color);">No results found.</p>'; return; } container.innerHTML = ` ${results.users.length ? `<h3>Users</h3><div id="${containerId}-users-list"></div>` : ''} ${results.posts.length ? `<h3>Posts</h3><div id="${containerId}-posts-list"></div>` : ''} `; results.users.forEach(user => { const userEl = document.createElement('div'); userEl.className = 'search-result-user'; userEl.dataset.userId = user.userId; const pfpUrl = sanitizeHTML(user.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${user.username}`; userEl.innerHTML = `<img src="${pfpUrl}" class="pfp pfp-sm"><div><div>${sanitizeHTML(user.displayName)} ${String(user.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</div><div style="color:var(--secondary-text-color)">@${sanitizeHTML(user.username)}</div></div>`; document.getElementById(`${containerId}-users-list`).appendChild(userEl); }); results.posts.forEach(post => { const postEl = document.createElement('div'); postEl.className = 'search-result-post'; postEl.innerHTML = `<b>${sanitizeHTML(post.displayName)}:</b> ${sanitizeHTML(post.postContent.replace(/<[^>]*>/g, ' ')).substring(0, 100)}...`; document.getElementById(`${containerId}-posts-list`).appendChild(postEl); }); },
                 renderImagePreview() { const container = document.getElementById('post-image-preview-container'); if (state.postImageUrl) { container.innerHTML = ` <img id="post-image-preview" src="${sanitizeHTML(state.postImageUrl)}" alt="Image Preview"> <button id="remove-image-btn" title="Remove Image">&times;</button> `; container.classList.remove('hidden'); } else { container.innerHTML = ''; container.classList.add('hidden'); } },
                 showFeedSkeleton(container) { const skeletonHTML = Array(3).fill().map(() => `<div class="post skeleton"><div class="post-header"><div class="pfp pfp-sm"></div><div class="post-display-name"></div></div><div class="post-content"></div></div>`).join(''); container.innerHTML = skeletonHTML; },
                 showProfileSkeleton() { document.getElementById('profile-content').innerHTML = ` <div class="profile-header skeleton"> <div class="profile-grid"> <div class="pfp pfp-lg"></div> <div class="profile-info"> <div class="profile-username" style="width: 60%; height: 28px; margin-bottom: 15px; border-radius: 4px;"></div> <div class="profile-actions-ig" style="display: flex; gap: 8px; flex-wrap: wrap;"><div style="width: 100%; height: 32px; background-color: var(--border-color); border-radius: 10px;"></div></div> <div class="profile-stats-ig" style="margin-top: 15px; display: flex; gap: 40px;"><div class="stat" style="width: 30%; height: 32px;"></div><div class="stat" style="width: 30%; height: 32px;"></div><div class="stat" style="width: 30%; height: 32px;"></div></div> </div> </div> <div class="profile-display-name-bio" style="padding: 0 16px;"> <div class="profile-display-name-ig" style="width: 40%; height: 20px; margin-bottom: 5px; border-radius: 4px;"></div> <div class="profile-description-ig" style="width: 80%; height: 48px; border-radius: 4px;"></div> </div> </div>`; this.showFeedSkeleton(document.getElementById('profile-feed')); },
@@ -1326,7 +1399,20 @@
                 async deletePost(postId) { if (!confirm("Delete this post?")) return; const postToDeleteIndex = state.posts.findIndex(p => p.postId === postId); if (postToDeleteIndex === -1) return; const postToDelete = state.posts[postToDeleteIndex]; state.posts.splice(postToDeleteIndex, 1); ui.render(); try { await api.call('deletePost', { postId, userId: state.currentUser.userId }); } catch(e) { alert(`Error: Could not delete post. ${e.message}`); state.posts.splice(postToDeleteIndex, 0, postToDelete); ui.render(); } },
                 async deleteComment(commentId) { if (!confirm("Delete this comment?")) return; let postIndex = -1, commentIndex = -1, commentToDelete = null; for (let i = 0; i < state.posts.length; i++) { const foundIndex = state.posts[i].comments.findIndex(c => c.commentId === commentId); if (foundIndex !== -1) { postIndex = i; commentIndex = foundIndex; commentToDelete = state.posts[i].comments[foundIndex]; break; } } if (postIndex === -1) return; state.posts[postIndex].comments.splice(commentIndex, 1); ui.render(); try { await api.call('deleteComment', { commentId, userId: state.currentUser.userId }); } catch(e) { alert(`Error: Could not delete comment. ${e.message}`); state.posts[postIndex].comments.splice(commentIndex, 0, commentToDelete); ui.render(); } },
                 async toggleFollow(followingId) { const followBtn = document.getElementById('follow-btn'); if (!followBtn) return; followBtn.disabled = true; try { const result = await api.call('toggleFollow', { followerId: state.currentUser.userId, followingId }); state.profileUser.relationship = result.newRelationship; const { user } = await api.call('getUserProfile', { userId: followingId, currentUserId: state.currentUser.userId }, 'GET'); state.profileUser = user; const isNowFollowing = result.newRelationship === 'Following' || result.newRelationship === 'Friends'; if (isNowFollowing) { if(!state.currentUserFollowingList.includes(followingId)) state.currentUserFollowingList.push(followingId); } else { state.currentUserFollowingList = state.currentUserFollowingList.filter(id => id !== followingId); } } catch (e) { alert(`Error: ${e.message}`); } finally { ui.renderProfilePage(); } },
-                async search(query, containerId = 'search-results') { const container = document.getElementById(containerId); container.innerHTML = '<p style="text-align:center; color: var(--secondary-text-color);">Searching...</p>'; try { const results = await api.call('search', { query, currentUserId: state.currentUser.userId }, 'GET'); if(containerId === 'search-results') ui.renderSearchResults(results, containerId); else return results.users; } catch(e) { container.innerHTML = `<p class="error-message">Search failed: ${e.message}</p>`; return []; }},
+                async search(query) {
+                    try {
+                        const results = await api.call('search', { query, currentUserId: state.currentUser.userId }, 'GET');
+                        state.search.results = results;
+                    } catch (e) {
+                        document.getElementById('search-results').innerHTML = `<p class="error-message">Search failed: ${e.message}</p>`;
+                        state.search.results = { users: [], posts: [] };
+                    } finally {
+                        state.search.isLoading = false;
+                        if (state.currentView === 'search') {
+                            ui.renderSearchView();
+                        }
+                    }
+                },
                 async showProfile(userId, scrollToPostId = null) {
                     if (state.currentView !== 'profile') state.feedScrollPosition = window.scrollY;
                     state.scrollToPostId = scrollToPostId;
@@ -1501,7 +1587,7 @@
                     if (!query || query.trim().length < 2) { container.innerHTML = ''; return; }
                     container.innerHTML = '<p style="text-align: center; color: var(--secondary-text-color);">Searching...</p>';
                     try {
-                        const users = await handlers.search(query, 'new-chat-user-list');
+                        const { users } = await api.call('search', { query, currentUserId: state.currentUser.userId }, 'GET');
                         const friendsAndFollowers = new Set([...state.currentUserFollowingList, ...state.currentUserFollowersList]);
                         const relevantUsers = users.filter(user => friendsAndFollowers.has(user.userId) && user.userId !== state.currentUser.userId);
                         
@@ -1649,7 +1735,7 @@
                         if(state.currentView === 'feed') { document.getElementById('feed').innerHTML = `<p class="error-message">Could not load feed: ${e.message}</p>`; }
                         if (e.message.includes("validate user session")) { setTimeout(() => core.logout(), 2000); }
                     } finally { 
-                        if (['feed', 'profile', 'hashtagFeed', 'messages', 'settings'].includes(state.currentView)) ui.render(); 
+                        if (['feed', 'profile', 'hashtagFeed', 'messages', 'settings', 'search'].includes(state.currentView)) ui.render(); 
                     }
                 },
                 updateNotificationDot() { document.getElementById('notification-dot').style.display = state.unreadNotificationCount > 0 ? 'block' : 'none'; },
@@ -1679,7 +1765,24 @@
                         }
                         ui.toggleModal('profileShortcut', true, position);
                     });
-                    document.getElementById('search-btn').addEventListener('click', () => ui.toggleModal('search', true));
+                    document.getElementById('search-btn').addEventListener('click', () => core.navigateTo('search'));
+                    const searchInput = document.getElementById('search-input');
+                    if (searchInput) {
+                        searchInput.addEventListener('input', (e) => {
+                            clearTimeout(searchTimeout);
+                            const query = e.target.value.trim();
+                            state.search.query = query;
+                            if (query.length === 0) {
+                                state.search.results = null;
+                                state.search.isLoading = false;
+                                ui.renderSearchView();
+                            } else if (query.length >= 2) {
+                                state.search.isLoading = true;
+                                ui.renderSearchView();
+                                searchTimeout = setTimeout(() => handlers.search(query), 300);
+                            }
+                        });
+                    }
                     document.getElementById('notifications-btn').addEventListener('click', handlers.showNotifications);
                     document.getElementById('messages-btn').addEventListener('click', () => handlers.loadMessagesView());
                     document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => { const modal = e.target.closest('.modal'); if(modal) { const modalName = modal.id.replace('-modal', '').replace(/-(\w)/g, (match, p1) => p1.toUpperCase()); ui.toggleModal(modalName, false); } }));
@@ -1688,7 +1791,6 @@
                     document.getElementById('outage-logout-btn').addEventListener('click', core.logout);
                     document.getElementById('theme-switch').addEventListener('change', (e) => { const newTheme = e.target.checked ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', newTheme); localStorage.setItem('theme', newTheme); });
                     document.getElementById('back-to-profile-btn').addEventListener('click', () => { handlers.showProfile(state.profileUser.userId) });
-                    document.getElementById('search-input').addEventListener('input', (e) => { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => handlers.search(e.target.value, 'search-results'), 300); });
                     document.getElementById('post-visibility-select').addEventListener('change', handlers.updatePostVisibility);
                     document.getElementById('privacy-switch').addEventListener('change', handlers.updateProfilePrivacy);
                     document.getElementById('add-image-btn').addEventListener('click', () => ui.toggleModal('imageUrl', true));
@@ -1741,10 +1843,17 @@
                         
                         if (target.closest('[data-nav="feed"]')) { e.preventDefault(); return core.navigateTo('feed'); }
                         const hashtagLink = target.closest('.hashtag-link'); if (hashtagLink) { e.preventDefault(); handlers.showHashtagFeed(hashtagLink.dataset.hashtag); return; }
-                        const profileLink = target.closest('.post-header, .comment-author, .search-result-user, #conversation-header .profile-link, #settings-profile-link');
+                        const profileLink = target.closest('.post-header, .comment-header-main, .search-result-user, #conversation-header .profile-link, #settings-profile-link');
                         if (profileLink && !target.closest('.post-options')) {
                              const userElement = profileLink.closest('[data-user-id]');
-                             if (userElement && userElement.dataset.userId) { ui.toggleModal('search', false); core.navigateTo('profile'); handlers.showProfile(userElement.dataset.userId); return; }
+                             if (userElement && userElement.dataset.userId) {
+                                if (state.currentView === 'search') {
+                                    document.getElementById('search-input').value = '';
+                                    state.search = { query: '', results: null, isLoading: false };
+                                }
+                                handlers.showProfile(userElement.dataset.userId);
+                                return;
+                             }
                         }
                         if (target.closest('#edit-profile-btn')) return core.navigateTo('editProfile');
                         if (target.closest('#follow-btn')) return handlers.toggleFollow(state.profileUser.userId);
