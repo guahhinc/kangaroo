@@ -947,7 +947,7 @@
                                 <div class="options-menu hidden">
                                     <button data-action="report-user" data-user-id="${state.profileUser.userId}">Report User</button>
                                     <button class="block-btn" data-action="block-user" data-user-id="${state.profileUser.userId}">Block User</button>
-                                    ${state.currentUser.isAdmin ? `<button class="delete-btn" data-action="ban-user" data-user-id="${state.profileUser.userId}">Ban User</button>` : ''}
+                                    ${state.currentUser.isAdmin ? `<button class="delete-btn" data-action="ban-user" data-user-id="${state.profileUser.userId}">🛡️ Ban User</button>` : ''}
                                 </div>
                             </div>
                         `;
@@ -1039,8 +1039,8 @@
                         authorSpecificButtons = `<button data-action="report-post">Report Post</button><button class="block-btn" data-action="block-user" data-user-id="${post.userId}">Block User</button>`;
                         // Add admin-specific buttons
                         if (isAdmin) {
-                            authorSpecificButtons += `<button class="delete-btn" data-action="delete-post">🛡 Delete Post️</button>`;
-                            authorSpecificButtons += `<button class="delete-btn" data-action="ban-user" data-user-id="${post.userId}">🛡 Ban User️</button>`;
+                            authorSpecificButtons += `<button class="delete-btn" data-action="delete-post">🛡️ Delete Post️</button>`;
+                            authorSpecificButtons += `<button class="delete-btn" data-action="ban-user" data-user-id="${post.userId}">🛡️ Ban User️</button>`;
                         }
                     }
 
