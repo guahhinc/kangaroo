@@ -130,9 +130,9 @@
         #image-url-modal input { width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 20px; }
         #image-url-modal .modal-actions { text-align: right; }
         #image-url-modal .modal-actions button { padding: 10px 20px; }
-        #report-modal textarea { width: 100%; min-height: 100px; resize: vertical; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 20px; }
-        #report-modal .modal-actions { text-align: right; }
-        #report-modal .modal-actions button { padding: 10px 20px; }
+        #report-modal textarea, #ban-modal textarea { width: 100%; min-height: 100px; resize: vertical; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 20px; }
+        #report-modal .modal-actions, #ban-modal .modal-actions { text-align: right; }
+        #report-modal .modal-actions button, #ban-modal .modal-actions button { padding: 10px 20px; }
         #notifications-modal .modal-content { max-width: 450px; }
         #notifications-modal .modal-header { padding-bottom: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px; }
         #notifications-list { max-height: 60vh; overflow-y: auto; }
@@ -265,7 +265,7 @@
         .profile-options-menu .options-menu { min-width: 160px; }
         .form-group { margin-bottom: 16px; text-align: left; }
         .form-group label { display: block; font-weight: 600; margin-bottom: 6px; }
-        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; background-color: var(--secondary-bg-color); color: var(--primary-text-color); font-size: 16px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; background-color: var(--secondary-bg-color); color: var(--primary-text-color); font-size: 16px; }
         .form-group textarea { resize: vertical; min-height: 80px; }
         #edit-profile-view .actions { margin-top: 20px; }
         #edit-profile-view .actions button { width: 100%; padding: 12px; font-size: 16px; }
@@ -771,11 +771,37 @@
         </div>
     </div>
 
+    <div id="ban-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="ban-modal-title">Ban User</h2>
+                <button class="close-modal-btn"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <p>Select a duration and provide a reason for the ban. The user will be notified.</p>
+            <div class="form-group">
+                <label for="ban-duration-select">Ban Duration</label>
+                <select id="ban-duration-select">
+                    <option value="1">1 Hour</option>
+                    <option value="24">1 Day (24 Hours)</option>
+                    <option value="72">3 Days (72 Hours)</option>
+                    <option value="168">1 Week (168 Hours)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="ban-reason-input">Reason</label>
+                <textarea id="ban-reason-input" placeholder="e.g., Spamming, harassment..." required></textarea>
+            </div>
+            <div class="modal-actions">
+                <button id="submit-ban-btn" class="primary">Submit Ban</button>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // ===== IMPORTANT: This URL MUST match your latest deployment =====
-            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyT0akpA5o2BDenHdhrXsKdWLKyjvDOTjc5Uu_1QtmMYUjHBrUdZ2mOpgMiLIUq0Y2h/exec';
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOXn9MBgiLAWRkGmo1bHJibPv4eCwY9Dc0m01a4tuVXROuslra02uY8Bn1sDWmiv4Q/exec';
 
             const pfpChoices = [
                 'https://img.freepik.com/free-psd/close-up-delicious-apple_23-2151868338.jpg?semt=ais_hybrid&w=740&q=80',
@@ -797,6 +823,7 @@
                 currentConversation: { id: null, messages: [], isGroup: false, creatorId: null, members: [] },
                 messagePollingIntervalId: null,
                 reporting: { userId: null, postId: null },
+                banningUserId: null,
                 blockedUsersList: [],
                 isConversationLoading: false,
                 newChat: { selectedUsers: new Map() },
@@ -818,7 +845,8 @@
                 report: document.getElementById('report-modal'), 
                 profileShortcut: document.getElementById('profile-shortcut-modal'),
                 newChat: document.getElementById('new-chat-modal'),
-                groupSettings: document.getElementById('group-settings-modal')
+                groupSettings: document.getElementById('group-settings-modal'),
+                ban: document.getElementById('ban-modal')
             };
 
             const VERIFIED_SVG = `<span class="material-symbols-rounded" style="color: #1DA1F2; vertical-align: -4px; margin-left: 5px;">verified</span>`;
@@ -919,6 +947,7 @@
                                 <div class="options-menu hidden">
                                     <button data-action="report-user" data-user-id="${state.profileUser.userId}">Report User</button>
                                     <button class="block-btn" data-action="block-user" data-user-id="${state.profileUser.userId}">Block User</button>
+                                    ${state.currentUser.isAdmin ? `<button class="delete-btn" data-action="ban-user" data-user-id="${state.profileUser.userId}">Ban User</button>` : ''}
                                 </div>
                             </div>
                         `;
@@ -997,9 +1026,24 @@
                 },
                 createPostElement(post) {
                     const postDiv = document.createElement('div'); postDiv.className = 'post'; postDiv.dataset.postId = post.postId; postDiv.dataset.userId = post.userId;
-                    const isLiked = post.likes.some(like => like.userId === state.currentUser.userId); const isAuthor = post.userId === state.currentUser.userId;
+                    const isLiked = post.likes.some(like => like.userId === state.currentUser.userId);
+                    const isAuthor = post.userId === state.currentUser.userId;
+                    const isAdmin = state.currentUser.isAdmin;
                     const pfpUrl = sanitizeHTML(post.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${post.username}`;
-                    let authorSpecificButtons = isAuthor ? `<button class="edit-btn" data-action="edit-post">Edit Post</button><button class="delete-btn" data-action="delete-post">Delete Post</button>` : `<button data-action="report-post">Report Post</button><button class="block-btn" data-action="block-user" data-user-id="${post.userId}">Block User</button>`;
+
+                    let authorSpecificButtons = '';
+                    if (isAuthor) {
+                        authorSpecificButtons = `<button class="edit-btn" data-action="edit-post">Edit Post</button><button class="delete-btn" data-action="delete-post">Delete Post</button>`;
+                    } else {
+                        // Base buttons for non-authors
+                        authorSpecificButtons = `<button data-action="report-post">Report Post</button><button class="block-btn" data-action="block-user" data-user-id="${post.userId}">Block User</button>`;
+                        // Add admin-specific buttons
+                        if (isAdmin) {
+                            authorSpecificButtons += `<button class="delete-btn" data-action="delete-post">Delete Post (Admin)</button>`;
+                            authorSpecificButtons += `<button class="delete-btn" data-action="ban-user" data-user-id="${post.userId}">Ban User</button>`;
+                        }
+                    }
+
                     const optionsMenuHTML = `<div class="post-options"><button class="options-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button><div class="options-menu hidden">${authorSpecificButtons}</div></div>`;
                     postDiv.innerHTML = `<div class="post-header"><img src="${pfpUrl}" class="pfp pfp-sm"><div class="post-header-info"><span class="post-display-name">${sanitizeHTML(post.displayName)} ${String(post.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</span><span class="post-timestamp" data-timestamp="${post.isStory ? post.expiryTimestamp : post.timestamp}" data-is-story="${post.isStory || false}">${formatTimestamp(post)}</span></div>${optionsMenuHTML}</div><div class="post-content"></div><div class="post-actions"><button class="like-btn ${isLiked ? 'liked' : ''}"><span class="material-symbols-rounded">favorite</span></button><span class="like-count">${post.likes.length} likes</span></div><div class="comments-section"><div class="comments-list">${[...post.comments].reverse().map(c => this.createCommentElement(c)).join('')}</div><form class="comment-form"><input type="text" placeholder="Add a comment..." required><button type="submit" class="primary">Post</button></form></div>`;
                     postDiv.querySelector('.post-content').innerHTML = this.formatPostContent(post.postContent);
@@ -1205,6 +1249,45 @@
                 async unblockUser(userIdToUnblock, event) { const unblockBtn = event.target.closest('.unblock-btn'); const userToUnblock = state.blockedUsersList.find(u => u.userId === userIdToUnblock); if (!userToUnblock || !unblockBtn) return; unblockBtn.disabled = true; unblockBtn.textContent = 'Unblocking...'; try { await api.call('blockUser', { blockerId: state.currentUser.userId, blockedId: userIdToUnblock }); state.blockedUsersList = state.blockedUsersList.filter(u => u.userId !== userIdToUnblock); ui.renderSettingsPage(); } catch(e) { alert(`Error unblocking user: ${e.message}`); unblockBtn.disabled = false; unblockBtn.textContent = 'Unblock'; } },
                 openReportModal(userId, postId = null) { state.reporting = { userId, postId }; const user = state.posts.find(p => p.userId === userId) || state.profileUser; const title = document.getElementById('report-modal-title'); title.textContent = postId ? `Report post by ${user.displayName}` : `Report ${user.displayName}`; ui.toggleModal('report', true); },
                 async submitReport() { const reason = document.getElementById('report-reason-input').value.trim(); if (!reason) { alert('Please provide a reason for the report.'); return; } ui.setButtonState('submit-report-btn', 'Submitting...', true); try { await api.call('reportUser', { reporterId: state.currentUser.userId, reportedId: state.reporting.userId, postId: state.reporting.postId, reason: reason }); alert('Report submitted successfully. Thank you for helping keep Kangaroo safe.'); ui.toggleModal('report', false); } catch (e) { alert(`Error: Could not submit report. ${e.message}`); } finally { ui.setButtonState('submit-report-btn', 'Submit Report', false); } },
+                openBanModal(userId) {
+                    const userToBan = state.posts.find(p => p.userId === userId) || state.profileUser;
+                    if (!userToBan) {
+                        alert("Could not find user information.");
+                        return;
+                    }
+                    state.banningUserId = userId; // Store the ID of the user to ban
+                    document.getElementById('ban-modal-title').textContent = `Ban ${userToBan.displayName}`;
+                    document.getElementById('ban-reason-input').value = '';
+                    ui.toggleModal('ban', true);
+                },
+                async submitBan() {
+                    const reason = document.getElementById('ban-reason-input').value.trim();
+                    const durationHours = document.getElementById('ban-duration-select').value;
+                    const userIdToBan = state.banningUserId;
+
+                    if (!reason) {
+                        alert('Please provide a reason for the ban.');
+                        return;
+                    }
+
+                    ui.setButtonState('submit-ban-btn', 'Submitting...', true);
+                    try {
+                        const result = await api.call('banUser', {
+                            adminUserId: state.currentUser.userId,
+                            bannedUserId: userIdToBan,
+                            reason: reason,
+                            durationHours: parseInt(durationHours)
+                        });
+                        alert(result.message || 'User has been banned successfully.');
+                        ui.toggleModal('ban', false);
+                        state.banningUserId = null;
+                        await core.refreshFeed(true); // Refresh feed to remove banned user's content
+                    } catch (e) {
+                        alert(`Error: ${e.message}`);
+                    } finally {
+                        ui.setButtonState('submit-ban-btn', 'Submit Ban', false);
+                    }
+                },
                 showHashtagFeed(tag) { if (state.currentView !== 'hashtagFeed') { state.feedScrollPosition = window.scrollY; } core.navigateTo('hashtagFeed'); const titleEl = document.getElementById('hashtag-title'); const feedEl = document.getElementById('hashtag-feed'); const fullHashtag = `#${tag.toLowerCase()}`; titleEl.textContent = `Posts tagged with ${fullHashtag}`; const filteredPosts = state.posts.filter(post => (post.postContent || '').toLowerCase().includes(fullHashtag) ); ui.renderFeed(filteredPosts, feedEl, false); },
                 async showNotifications() { ui.toggleModal('notifications', true); ui.renderNotifications(); if(state.unreadNotificationCount > 0) { state.unreadNotificationCount = 0; core.updateNotificationDot(); try { await api.call('markNotificationsAsRead', { userId: state.currentUser.userId }); } catch (e) { console.error("Failed to mark notifications as read:", e); } } },
                 async deleteNotification(notificationId) { state.notifications = state.notifications.filter(n => n.notificationId !== notificationId); ui.renderNotifications(); try { await api.call('deleteNotification', { userId: state.currentUser.userId, notificationId }); } catch(e) { alert("Could not delete notification: " + e.message); core.refreshFeed(false); } },
@@ -1471,6 +1554,7 @@
                     document.getElementById('image-url-modal-done-btn').addEventListener('click', () => { const url = document.getElementById('image-url-modal-input').value.trim(); if (url) { state.postImageUrl = url; ui.renderImagePreview(); } document.getElementById('image-url-modal-input').value = ''; ui.toggleModal('imageUrl', false); });
                     document.getElementById('register-tos').addEventListener('change', (e) => { document.getElementById('register-btn').disabled = !e.target.checked; });
                     document.getElementById('submit-report-btn').addEventListener('click', handlers.submitReport);
+                    document.getElementById('submit-ban-btn').addEventListener('click', handlers.submitBan);
                     document.getElementById('create-post-form').addEventListener('click', (e) => { if (e.target.id === 'remove-image-btn') { state.postImageUrl = null; ui.renderImagePreview(); } });
                     document.getElementById('notifications-list').addEventListener('click', (e) => { const item = e.target.closest('.notification-item'); if(!item) return; if(e.target.closest('.delete-notification-btn')) { handlers.deleteNotification(item.dataset.notificationId); return; } const clickableArea = e.target.closest('.notification-item-clickable'); if (clickableArea) { ui.toggleModal('notifications', false); const notification = state.notifications.find(n => n.notificationId === item.dataset.notificationId); if (!notification) return; if (notification.postAuthorId && notification.postId && notification.postId !== 'null') { handlers.showProfile(notification.postAuthorId, notification.postId); } else if (notification.actorUserId) { handlers.showProfile(notification.actorUserId); } } });
                     document.getElementById('edit-profile-view').addEventListener('click', e => { const choice = e.target.closest('#pfp-choices-gallery img'); if (choice) { document.getElementById('edit-pfp-url').value = choice.dataset.url; document.querySelectorAll('#pfp-choices-gallery img').forEach(img => img.classList.remove('selected')); choice.classList.add('selected'); } });
@@ -1510,6 +1594,7 @@
                             else if (action === 'unblock-user') handlers.unblockUser(actionButton.dataset.userId, e);
                             else if (action === 'report-post') handlers.openReportModal(postEl.dataset.userId, postEl.dataset.postId);
                             else if (action === 'report-user') handlers.openReportModal(actionButton.dataset.userId);
+                            else if (action === 'ban-user') handlers.openBanModal(actionButton.dataset.userId);
                             return;
                         }
                         
