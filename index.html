@@ -308,8 +308,9 @@
 
         #conversations-list, #conversation-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transition: transform 0.3s ease-in-out, opacity 0.3s; background-color: var(--secondary-bg-color); }
         #conversations-list.is-loading { opacity: 0.6; pointer-events: none; }
-        #conversations-list { transform: translateX(0); overflow-y: auto; z-index: 2; }
+        #conversations-list { transform: translateX(0); z-index: 2; display: flex; flex-direction: column; }
         #conversation-view { transform: translateX(100%); display: flex; flex-direction: column; z-index: 1; }
+        #conversations-list-body { flex-grow: 1; overflow-y: auto; }
         .messages-container.show-chat-view #conversations-list { transform: translateX(-100%); }
         .messages-container.show-chat-view #conversation-view { transform: translateX(0); }
         @media (min-width: 768px) { 
@@ -331,7 +332,7 @@
         .unread-dot { width: 10px; height: 10px; background-color: var(--accent-color); border-radius: 50%; margin-left: auto; flex-shrink: 0; }
         .conversation-item.active .unread-dot { background-color: white; }
         #conversation-header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border-color); font-weight: 600; }
-        #conversation-header a { text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; flex-grow: 1; }
+        #conversation-header a, #conversation-header > div { text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; flex-grow: 1; }
         #back-to-convos-btn { display: block; background: none; border: none; cursor: pointer; padding: 5px; margin-right: 10px; color: var(--primary-text-color); }
         #messages-list { flex-grow: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
         .message-wrapper { display: flex; flex-direction: column; }
@@ -400,7 +401,47 @@
         #profile-shortcut-modal .modal-content button:hover {
             background-color: var(--border-color);
         }
-
+        
+        #new-chat-modal .modal-content, #group-settings-modal .modal-content { max-width: 450px; }
+        #new-chat-user-search, #edit-group-add-user-search { width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 15px; }
+        #new-chat-selected-users { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; min-height: 46px; margin-bottom: 10px; }
+        .selected-user-pill { background-color: var(--accent-color); color: white; padding: 4px 8px; border-radius: 16px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .selected-user-pill button { background: none; color: white; font-size: 18px; padding: 0; line-height: 1; }
+        #new-chat-user-list, #edit-group-user-list, #group-members-list { max-height: 25vh; overflow-y: auto; }
+        .new-chat-user-item, .group-member-item { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 10px; cursor: pointer; }
+        .new-chat-user-item:hover, .group-member-item:hover { background-color: var(--border-color); }
+        .group-member-item { justify-content: space-between; }
+        .group-member-item .remove-member-btn { color: var(--error-color); font-size: 24px; padding: 4px;}
+        .group-member-item-info { display: flex; align-items: center; gap: 12px; flex-grow: 1; }
+        #new-chat-group-name-container { margin-top: 15px; }
+        #new-chat-group-name { width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--border-color); border-radius: 10px; }
+        #new-chat-modal .modal-actions, #group-settings-modal .modal-actions { text-align: right; margin-top: 20px; }
+        #new-chat-modal .modal-actions button, #group-settings-modal .modal-actions button { padding: 10px 20px; }
+        
+        #group-settings-modal #leave-group-btn {
+            width: 100%;
+            margin-top: 20px;
+            background-color: transparent;
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
+            padding: 10px;
+            font-size: 16px;
+        }
+        #group-settings-modal #delete-group-btn {
+            width: 100%;
+            margin-top: 10px;
+            background-color: var(--error-color);
+            color: white;
+            padding: 10px;
+            font-size: 16px;
+        }
+        
+        #conversations-list-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        #conversations-list-header h3 { margin: 0; font-size: 18px; }
+        #new-chat-btn { background: none; padding: 5px; color: var(--primary-text-color); }
+        #new-chat-btn .material-symbols-rounded { font-size: 28px; vertical-align: -2px; }
+        #conversation-header .options-btn { margin-left: auto; }
+        
         @media (max-width: 768px) {
             header {
                 top: auto;
@@ -424,16 +465,13 @@
                 padding-bottom: calc(65px + env(safe-area-inset-bottom));
             }
             
-            /* MODIFICATION START: Mobile messages layout fix */
             #messages-view {
-                height: auto; /* Let the container define the height */
+                height: auto;
             }
             .messages-container {
                 border: none;
-                /* Calculate height to fit screen between top padding and bottom nav bar */
                 height: calc(100vh - (20px + var(--banner-height) + env(safe-area-inset-top)) - (65px + env(safe-area-inset-bottom)));
             }
-            /* MODIFICATION END */
         }
     </style>
 </head>
@@ -628,12 +666,14 @@
     <div id="messages-view" class="view">
         <div class="container">
             <div class="messages-container">
-                <div id="conversations-list"></div>
+                <div id="conversations-list">
+                    <!-- Header and list body will be injected here -->
+                </div>
                 <div id="conversation-view">
                     <div id="conversation-placeholder">
                         <span class="material-symbols-rounded">chat</span>
                         <h3>Your Messages</h3>
-                        <p>Select a conversation to start chatting.</p>
+                        <p>Select a conversation or start a new one.</p>
                     </div>
                 </div>
             </div>
@@ -686,10 +726,56 @@
         </div>
     </div>
 
+    <div id="new-chat-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>New Message</h2>
+                <button class="close-modal-btn"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div id="new-chat-selected-users"></div>
+            <input type="search" id="new-chat-user-search" placeholder="Search for friends...">
+            <div id="new-chat-user-list"></div>
+            <div id="new-chat-group-name-container" class="hidden">
+                <input type="text" id="new-chat-group-name" placeholder="Group Name">
+            </div>
+            <div class="modal-actions">
+                <button id="create-chat-btn" class="primary" disabled>Chat</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="group-settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Group Settings</h2>
+                <button class="close-modal-btn"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div class="form-group">
+                <label for="edit-group-name">Group Name</label>
+                <input type="text" id="edit-group-name">
+            </div>
+            <div class="form-group">
+                <label>Members (<span id="group-member-count"></span>)</label>
+                <div id="group-members-list"></div>
+            </div>
+            <div class="form-group hidden" id="edit-group-add-members-container">
+                <label for="edit-group-add-user-search">Add Members</label>
+                <input type="search" id="edit-group-add-user-search" placeholder="Search for friends...">
+                <div id="edit-group-user-list"></div>
+            </div>
+            <div class="modal-actions">
+                <button id="save-group-changes-btn" class="primary hidden">Save Changes</button>
+            </div>
+            <button id="leave-group-btn">Leave Group</button>
+            <button id="delete-group-btn" class="hidden">Delete Group</button>
+        </div>
+    </div>
+
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxm-DlJnvD3M0aiPhjFd6dUWs2AWOhKJn_IUciUpM_rHGBujx77I14m98YIgUfK7BE/exec';
+            // ===== IMPORTANT: This URL MUST match your latest deployment =====
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwEyJ6rp7I387pOlF0eZlUyU7esxVDMMpr9Bn1spkskat4aQbmnspnKYSgbf2Ex_7k/exec';
 
             const pfpChoices = [
                 'https://api.dicebear.com/8.x/pixel-art/svg?seed=pixel',
@@ -708,10 +794,13 @@
                 backgroundPosts: null, backgroundRefreshIntervalId: null, storyUpdateIntervalId: null,
                 feedScrollPosition: 0, postImageUrl: null, editingPostId: null, banCountdownIntervalId: null,
                 scrollToPostId: null, conversations: [],
-                currentConversation: { otherUserId: null, messages: [] }, messagePollingIntervalId: null,
+                currentConversation: { id: null, messages: [], isGroup: false, creatorId: null, members: [] },
+                messagePollingIntervalId: null,
                 reporting: { userId: null, postId: null },
                 blockedUsersList: [],
-                isConversationLoading: false
+                isConversationLoading: false,
+                newChat: { selectedUsers: new Map() },
+                groupEdit: { membersToAdd: new Set(), membersToRemove: new Set() }
             };
             
             const views = { 
@@ -722,7 +811,16 @@
                 settings: document.getElementById('settings-view')
             };
 
-            const modals = { search: document.getElementById('search-modal'), notifications: document.getElementById('notifications-modal'), imageUrl: document.getElementById('image-url-modal'), report: document.getElementById('report-modal'), profileShortcut: document.getElementById('profile-shortcut-modal') };
+            const modals = { 
+                search: document.getElementById('search-modal'), 
+                notifications: document.getElementById('notifications-modal'), 
+                imageUrl: document.getElementById('image-url-modal'), 
+                report: document.getElementById('report-modal'), 
+                profileShortcut: document.getElementById('profile-shortcut-modal'),
+                newChat: document.getElementById('new-chat-modal'),
+                groupSettings: document.getElementById('group-settings-modal')
+            };
+
             const VERIFIED_SVG = `<span class="material-symbols-rounded" style="color: #1DA1F2; vertical-align: -4px; margin-left: 5px;">verified</span>`;
 
             const api = {
@@ -909,32 +1007,26 @@
                 },
                 createCommentElement(comment) { const isAuthor = comment.userId === state.currentUser.userId; const optionsMenuHTML = `<div class="post-options"><button class="options-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button><div class="options-menu hidden"><button class="delete-btn" data-action="delete-comment">Delete Comment</button></div></div>`; return `<div class="comment" data-comment-id="${comment.commentId}" data-user-id="${comment.userId}"><div class="comment-text"><a class="comment-author">${sanitizeHTML(comment.displayName)} ${String(comment.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</a><span>${sanitizeHTML(comment.commentText)}</span></div>${isAuthor ? optionsMenuHTML : ''}</div>`; },
                 renderNotifications() { const container = document.getElementById('notifications-list'); if(state.notifications.length === 0) { container.innerHTML = '<p style="text-align: center; color: var(--secondary-text-color); padding: 20px 0;">No new notifications.</p>'; return; } container.innerHTML = ''; state.notifications.forEach(n => { const item = document.createElement('div'); item.className = 'notification-item'; item.dataset.notificationId = n.notificationId; item.dataset.actorId = n.actorUserId; item.dataset.postId = n.postId; let text = ''; switch(n.actionType) { case 'like': text = 'liked your post.'; break; case 'comment': text = 'commented on your post.'; break; case 'follow': text = 'started following you.'; break; } const pfpUrl = sanitizeHTML(n.actorProfilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${n.actorDisplayName}`; item.innerHTML = ` <div class="notification-item-clickable" style="display: flex; align-items: center; gap: 12px; flex-grow: 1;"> <img src="${pfpUrl}" class="pfp pfp-sm"> <div class="notification-text"> <span class="username">${sanitizeHTML(n.actorDisplayName)}</span> ${text} <div class="notification-timestamp">${formatTimestamp({timestamp: n.timestamp})}</div> </div> </div> <button class="delete-btn delete-notification-btn" title="Delete Notification"><span class="material-symbols-rounded">close</span></button> `; container.appendChild(item); }); },
-                renderSearchResults(results) { const container = document.getElementById('search-results'); if (!results.users.length && !results.posts.length) { container.innerHTML = '<p style="text-align:center; color: var(--secondary-text-color);">No results found.</p>'; return; } container.innerHTML = ` ${results.users.length ? `<h3>Users</h3><div id="search-users-list"></div>` : ''} ${results.posts.length ? `<h3>Posts</h3><div id="search-posts-list"></div>` : ''} `; results.users.forEach(user => { const userEl = document.createElement('div'); userEl.className = 'search-result-user'; userEl.dataset.userId = user.userId; const pfpUrl = sanitizeHTML(user.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${user.username}`; userEl.innerHTML = `<img src="${pfpUrl}" class="pfp pfp-sm"><div><div>${sanitizeHTML(user.displayName)} ${String(user.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</div><div style="color:var(--secondary-text-color)">@${sanitizeHTML(user.username)}</div></div>`; document.getElementById('search-users-list').appendChild(userEl); }); results.posts.forEach(post => { const postEl = document.createElement('div'); postEl.className = 'search-result-post'; postEl.innerHTML = `<b>${sanitizeHTML(post.displayName)}:</b> ${sanitizeHTML(post.postContent.replace(/<[^>]*>/g, ' ')).substring(0, 100)}...`; document.getElementById('search-posts-list').appendChild(postEl); }); },
+                renderSearchResults(results, containerId = 'search-results') { const container = document.getElementById(containerId); if (!results.users.length && !results.posts.length) { container.innerHTML = '<p style="text-align:center; color: var(--secondary-text-color);">No results found.</p>'; return; } container.innerHTML = ` ${results.users.length ? `<h3>Users</h3><div id="${containerId}-users-list"></div>` : ''} ${results.posts.length ? `<h3>Posts</h3><div id="${containerId}-posts-list"></div>` : ''} `; results.users.forEach(user => { const userEl = document.createElement('div'); userEl.className = 'search-result-user'; userEl.dataset.userId = user.userId; const pfpUrl = sanitizeHTML(user.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${user.username}`; userEl.innerHTML = `<img src="${pfpUrl}" class="pfp pfp-sm"><div><div>${sanitizeHTML(user.displayName)} ${String(user.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</div><div style="color:var(--secondary-text-color)">@${sanitizeHTML(user.username)}</div></div>`; document.getElementById(`${containerId}-users-list`).appendChild(userEl); }); results.posts.forEach(post => { const postEl = document.createElement('div'); postEl.className = 'search-result-post'; postEl.innerHTML = `<b>${sanitizeHTML(post.displayName)}:</b> ${sanitizeHTML(post.postContent.replace(/<[^>]*>/g, ' ')).substring(0, 100)}...`; document.getElementById(`${containerId}-posts-list`).appendChild(postEl); }); },
                 renderImagePreview() { const container = document.getElementById('post-image-preview-container'); if (state.postImageUrl) { container.innerHTML = ` <img id="post-image-preview" src="${sanitizeHTML(state.postImageUrl)}" alt="Image Preview"> <button id="remove-image-btn" title="Remove Image">&times;</button> `; container.classList.remove('hidden'); } else { container.innerHTML = ''; container.classList.add('hidden'); } },
                 showFeedSkeleton(container) { const skeletonHTML = Array(3).fill().map(() => `<div class="post skeleton"><div class="post-header"><div class="pfp pfp-sm"></div><div class="post-display-name"></div></div><div class="post-content"></div></div>`).join(''); container.innerHTML = skeletonHTML; },
                 showProfileSkeleton() { document.getElementById('profile-content').innerHTML = ` <div class="profile-header skeleton"> <div class="profile-grid"> <div class="pfp pfp-lg"></div> <div class="profile-info"> <div class="profile-username" style="width: 60%; height: 28px; margin-bottom: 15px; border-radius: 4px;"></div> <div class="profile-actions-ig" style="display: flex; gap: 8px; flex-wrap: wrap;"><div style="width: 100%; height: 32px; background-color: var(--border-color); border-radius: 10px;"></div></div> <div class="profile-stats-ig" style="margin-top: 15px; display: flex; gap: 40px;"><div class="stat" style="width: 30%; height: 32px;"></div><div class="stat" style="width: 30%; height: 32px;"></div><div class="stat" style="width: 30%; height: 32px;"></div></div> </div> </div> <div class="profile-display-name-bio" style="padding: 0 16px;"> <div class="profile-display-name-ig" style="width: 40%; height: 20px; margin-bottom: 5px; border-radius: 4px;"></div> <div class="profile-description-ig" style="width: 80%; height: 48px; border-radius: 4px;"></div> </div> </div>`; this.showFeedSkeleton(document.getElementById('profile-feed')); },
                 toggleModal(modalName, show, position = null) {
                     const modal = modals[modalName];
                     if (!modal) return;
-                    
                     modal.classList.toggle('hidden', !show);
-
+                    if (modalName === 'newChat' && !show) {
+                        state.newChat.selectedUsers.clear();
+                        document.getElementById('new-chat-user-search').value = '';
+                        document.getElementById('new-chat-group-name').value = '';
+                    }
+                    if (modalName === 'groupSettings' && !show) {
+                        state.groupEdit.membersToAdd.clear();
+                        state.groupEdit.membersToRemove.clear();
+                    }
                     const modalContent = modal.querySelector('.modal-content');
-                    if (modalContent) {
-                        if (show && position) {
-                            modalContent.style.top = position.top ? `${position.top}px` : 'auto';
-                            modalContent.style.bottom = position.bottom ? `${position.bottom}px` : 'auto';
-                            modalContent.style.left = position.left ? `${position.left}px` : 'auto';
-                            modalContent.style.right = position.right ? `${position.right}px` : 'auto';
-                        } else if (!show) {
-                            modalContent.removeAttribute('style');
-                        }
-                    }
-                    
-                    if(show === false && modalName === 'report') {
-                        state.reporting = { userId: null, postId: null };
-                        document.getElementById('report-reason-input').value = '';
-                    }
+                    if (modalContent) { if (show && position) { modalContent.style.top = position.top ? `${position.top}px` : 'auto'; modalContent.style.bottom = position.bottom ? `${position.bottom}px` : 'auto'; modalContent.style.left = position.left ? `${position.left}px` : 'auto'; modalContent.style.right = position.right ? `${position.right}px` : 'auto'; } else if (!show) { modalContent.removeAttribute('style'); } }
+                    if(show === false && modalName === 'report') { state.reporting = { userId: null, postId: null }; document.getElementById('report-reason-input').value = ''; }
                 },
                 renderProfileShortcutModal() {
                     const user = state.currentUser;
@@ -985,10 +1077,86 @@
                 showError(elId, msg) { const el = document.getElementById(elId); el.textContent = msg; el.classList.remove('hidden'); },
                 hideError(elId) { document.getElementById(elId).classList.add('hidden'); },
                 setButtonState(btnId, text, disabled) { const btn = document.getElementById(btnId); if(btn) { btn.textContent = text; btn.disabled = disabled; } },
-                renderMessagesPage() { this.renderConversationsList(); if (state.currentConversation.otherUserId) { this.renderConversationHistory(); } else { document.getElementById('conversation-view').innerHTML = ` <div id="conversation-placeholder"> <span class="material-symbols-rounded">chat</span> <h3>Your Messages</h3> <p>Select a conversation to start chatting.</p> </div>`; } },
-                renderConversationsList() { const container = document.getElementById('conversations-list'); if (state.conversations.length === 0) { container.innerHTML = '<p style="text-align: center; color: var(--secondary-text-color); padding: 15px;">No conversations yet.</p>'; return; } container.innerHTML = state.conversations.map(convo => { const isActive = convo.otherUser.userId === state.currentConversation.otherUserId; const pfp = sanitizeHTML(convo.otherUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${convo.otherUser.displayName}`; return ` <div class="conversation-item ${isActive ? 'active' : ''}" data-user-id="${convo.otherUser.userId}"> <img src="${pfp}" class="pfp pfp-sm"> <div class="convo-details"> <div class="username">${sanitizeHTML(convo.otherUser.displayName)}</div> <div class="last-message">${sanitizeHTML(convo.lastMessage)}</div> </div> ${convo.unreadCount > 0 ? '<div class="unread-dot"></div>' : ''} </div> `; }).join(''); },
-                renderConversationHistory() { const conversationView = document.getElementById('conversation-view'); const otherUser = state.conversations.find(c => c.otherUser.userId === state.currentConversation.otherUserId)?.otherUser; if (!otherUser) { conversationView.innerHTML = `<div id="conversation-placeholder"><p>Could not load conversation.</p></div>`; return; } const pfp = sanitizeHTML(otherUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${otherUser.displayName}`; conversationView.innerHTML = ` <div id="conversation-header"> <button id="back-to-convos-btn"><span class="material-symbols-rounded">arrow_back_ios_new</span></button> <a href="#" class="profile-link" data-user-id="${otherUser.userId}"> <img src="${pfp}" class="pfp pfp-sm"> <span>${sanitizeHTML(otherUser.displayName)} ${String(otherUser.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</span> </a> </div> <div id="messages-list"> ${state.currentConversation.messages.map(msg => this.createMessageBubble(msg)).join('')} </div> <form id="message-input-form"> <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" required> <button type="submit" class="primary">Send</button> </form> `; const messagesList = document.getElementById('messages-list'); if (messagesList) { messagesList.scrollTop = messagesList.scrollHeight; setTimeout(() => messagesList.scrollTop = messagesList.scrollHeight, 100); } },
-                createMessageBubble(message) { const isSent = message.senderId === state.currentUser.userId; let statusHTML = ''; let wrapperContent = ''; if (isSent) { if (message.status === 'sent') { statusHTML = '<div class="message-status">Sent</div>'; } else if (message.status === 'sending') { statusHTML = '<div class="message-status">Sending...</div>'; } else if (message.status === 'failed') { statusHTML = '<div class="message-status error">Failed to send</div>'; } const optionsMenuHTML = ` <div class="message-options"> <button class="options-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button> <div class="options-menu hidden"> <button class="delete-btn" data-action="delete-message" data-message-id="${message.messageId}">Unsend</button> </div> </div> `; wrapperContent = ` <div class="message-bubble sent">${sanitizeHTML(message.messageContent)}</div> ${optionsMenuHTML} `; } else { wrapperContent = `<div class="message-bubble received">${sanitizeHTML(message.messageContent)}</div>`; } return ` <div class="message-wrapper ${isSent ? 'sent' : 'received'}" data-message-id="${message.messageId}"> ${wrapperContent} </div> ${isSent ? statusHTML : ''} `; },
+                renderMessagesPage() { this.renderConversationsList(); if (state.currentConversation.id) { this.renderConversationHistory(); } else { document.getElementById('conversation-view').innerHTML = ` <div id="conversation-placeholder"> <span class="material-symbols-rounded">chat</span> <h3>Your Messages</h3> <p>Select a conversation or start a new one.</p> </div>`; } },
+                renderConversationsList() { const container = document.getElementById('conversations-list'); let headerHTML = `<div id="conversations-list-header"><h3>Messages</h3><button id="new-chat-btn" title="New Message"><span class="material-symbols-rounded">add</span></button></div>`; let listHTML = ''; if (state.conversations.length === 0) { listHTML = '<p style="text-align: center; color: var(--secondary-text-color); padding: 15px;">No conversations yet.</p>'; } else { listHTML = state.conversations.map(convo => { const isActive = convo.otherUser.userId === state.currentConversation.id; const pfp = sanitizeHTML(convo.otherUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${convo.otherUser.displayName}`; return ` <div class="conversation-item ${isActive ? 'active' : ''}" data-user-id="${convo.otherUser.userId}" data-is-group="${convo.otherUser.isGroup || false}"> <img src="${pfp}" class="pfp pfp-sm"> <div class="convo-details"> <div class="username">${sanitizeHTML(convo.otherUser.displayName)}</div> <div class="last-message">${sanitizeHTML(convo.lastMessage)}</div> </div> ${convo.unreadCount > 0 ? '<div class="unread-dot"></div>' : ''} </div> `; }).join(''); } container.innerHTML = headerHTML + `<div id="conversations-list-body">${listHTML}</div>`; },
+                renderConversationHistory() {
+                    const conversationView = document.getElementById('conversation-view');
+                    const otherUser = state.conversations.find(c => c.otherUser.userId === state.currentConversation.id)?.otherUser;
+                    if (!otherUser) { conversationView.innerHTML = `<div id="conversation-placeholder"><p>Could not load conversation.</p></div>`; return; }
+                    
+                    const pfp = sanitizeHTML(otherUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${otherUser.displayName}`;
+                    const profileLinkContent = `<img src="${pfp}" class="pfp pfp-sm"> <span>${sanitizeHTML(otherUser.displayName)} ${!otherUser.isGroup && String(otherUser.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</span>`;
+                    const profileLink = otherUser.isGroup ? `<div>${profileLinkContent}</div>` : `<a href="#" class="profile-link" data-user-id="${otherUser.userId}">${profileLinkContent}</a>`;
+                    const optionsButton = otherUser.isGroup ? `<button class="options-btn" id="group-settings-btn" title="Group Settings"><span class="material-symbols-rounded">info</span></button>` : '';
+
+                    conversationView.innerHTML = ` <div id="conversation-header"> <button id="back-to-convos-btn"><span class="material-symbols-rounded">arrow_back_ios_new</span></button> ${profileLink} ${optionsButton} </div> <div id="messages-list"></div> <form id="message-input-form"> <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" required> <button type="submit" class="primary">Send</button> </form> `;
+                    const messagesListEl = document.getElementById('messages-list');
+                    messagesListEl.innerHTML = state.currentConversation.messages.map(msg => this.createMessageBubble(msg)).join('');
+                    messagesListEl.scrollTop = messagesListEl.scrollHeight;
+                    setTimeout(() => messagesListEl.scrollTop = messagesListEl.scrollHeight, 100);
+                },
+                createMessageBubble(message) {
+                    const isSent = message.senderId === state.currentUser.userId;
+                    const isGroup = state.currentConversation.isGroup;
+                    let senderInfo = '';
+                    if (isGroup && !isSent) {
+                        senderInfo = `<div style="font-size: 12px; font-weight: 600; margin-left: 8px; margin-bottom: 2px;">${sanitizeHTML(message.senderName)}</div>`;
+                    }
+                    let statusHTML = ''; let wrapperContent = '';
+                    if (isSent) { if (message.status === 'sent') { statusHTML = '<div class="message-status">Sent</div>'; } else if (message.status === 'sending') { statusHTML = '<div class="message-status">Sending...</div>'; } else if (message.status === 'failed') { statusHTML = '<div class="message-status error">Failed to send</div>'; } const optionsMenuHTML = ` <div class="message-options"> <button class="options-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button> <div class="options-menu hidden"> <button class="delete-btn" data-action="delete-message" data-message-id="${message.messageId}">Unsend</button> </div> </div> `; wrapperContent = ` <div class="message-bubble sent">${sanitizeHTML(message.messageContent)}</div> ${optionsMenuHTML} `; } else { wrapperContent = `<div class="message-bubble received">${sanitizeHTML(message.messageContent)}</div>`; }
+                    return `<div class="message-wrapper ${isSent ? 'sent' : 'received'}" data-message-id="${message.messageId}"> ${senderInfo} ${wrapperContent} </div> ${isSent ? statusHTML : ''}`;
+                },
+                renderNewChatModal() {
+                    const selectedContainer = document.getElementById('new-chat-selected-users');
+                    const groupNameContainer = document.getElementById('new-chat-group-name-container');
+                    const createBtn = document.getElementById('create-chat-btn');
+
+                    selectedContainer.innerHTML = '';
+                    state.newChat.selectedUsers.forEach(user => {
+                        const pill = document.createElement('div');
+                        pill.className = 'selected-user-pill';
+                        pill.innerHTML = `${sanitizeHTML(user.displayName)} <button data-user-id="${user.userId}">&times;</button>`;
+                        selectedContainer.appendChild(pill);
+                    });
+
+                    const numSelected = state.newChat.selectedUsers.size;
+                    groupNameContainer.classList.toggle('hidden', numSelected < 2);
+                    createBtn.disabled = numSelected === 0;
+                    createBtn.textContent = numSelected > 1 ? 'Create Group' : 'Chat';
+                },
+                renderGroupSettingsModal() {
+                    const { creatorId, members, id: groupId } = state.currentConversation;
+                    const group = state.conversations.find(c => c.otherUser.userId === groupId)?.otherUser;
+                    if (!group) return;
+
+                    const isCreator = state.currentUser.userId === creatorId;
+                    
+                    document.getElementById('edit-group-name').value = group.displayName;
+                    document.getElementById('edit-group-name').disabled = !isCreator;
+                    document.getElementById('edit-group-add-members-container').classList.toggle('hidden', !isCreator);
+                    document.getElementById('save-group-changes-btn').classList.toggle('hidden', !isCreator);
+                    document.getElementById('delete-group-btn').classList.toggle('hidden', !isCreator);
+
+                    const membersList = document.getElementById('group-members-list');
+                    membersList.innerHTML = '';
+                    members.forEach(member => {
+                        const pfp = sanitizeHTML(member.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${member.username}`;
+                        const isSelf = member.userId === state.currentUser.userId;
+                        const isMemberCreator = member.userId === creatorId;
+                        const removeBtn = (isCreator && !isSelf) ? `<button class="remove-member-btn" data-user-id="${member.userId}">&times;</button>` : '';
+                        const item = document.createElement('div');
+                        item.className = 'group-member-item';
+                        item.innerHTML = `
+                            <div class="group-member-item-info">
+                                <img src="${pfp}" class="pfp pfp-sm">
+                                <div>${sanitizeHTML(member.displayName)} ${isMemberCreator ? '<span style="font-size:12px; color:var(--secondary-text-color);">(Creator)</span>': ''}</div>
+                            </div>
+                            ${removeBtn}
+                        `;
+                        membersList.appendChild(item);
+                    });
+                    document.getElementById('group-member-count').textContent = members.length;
+                }
             };
 
             const handlers = {
@@ -997,27 +1165,16 @@
                     ui.hideError('register-error');
                     const [username, displayName, password] = [document.getElementById('register-username').value.trim(), document.getElementById('register-displayname').value.trim(), document.getElementById('register-password').value.trim()];
                     const tosChecked = document.getElementById('register-tos').checked;
-
                     if (!tosChecked) return ui.showError('register-error', 'You must agree to the Terms of Service.');
                     if (!username || !displayName || !password) return ui.showError('register-error', 'All fields required.');
                     if (password.length < 4) return ui.showError('register-error', 'Password must be at least 4 characters long.');
-                    
                     const usernameRegex = /^[a-zA-Z0-9_.]+$/;
-                    if (!usernameRegex.test(username)) {
-                        return ui.showError('register-error', 'Username can only contain letters, numbers, dots, and underscores.');
-                    }
-
+                    if (!usernameRegex.test(username)) { return ui.showError('register-error', 'Username can only contain letters, numbers, dots, and underscores.'); }
                     ui.setButtonState('register-btn', 'Signing Up...', true);
                     try {
                         const { user } = await api.call('register', { username, displayName, password });
-                        state.currentUser = user;
-                        localStorage.setItem('currentUser', JSON.stringify(user));
-                        await core.initializeApp();
-                    } catch (e) {
-                        ui.showError('register-error', e.message);
-                    } finally {
-                        ui.setButtonState('register-btn', 'Sign Up', false);
-                    }
+                        state.currentUser = user; localStorage.setItem('currentUser', JSON.stringify(user)); await core.initializeApp();
+                    } catch (e) { ui.showError('register-error', e.message); } finally { ui.setButtonState('register-btn', 'Sign Up', false); }
                 },
                 async createPost() { const contentInput = document.getElementById('post-content-input'); let postContent = sanitizeHTML(contentInput.value.trim()); const imageUrl = state.postImageUrl; if (!postContent && !imageUrl && !state.editingPostId) return; if (imageUrl) { postContent += `<br><img src="${sanitizeHTML(imageUrl)}" alt="user image">`; } const isUpdating = !!state.editingPostId; const button = document.getElementById('submit-post-btn'); const originalButtonText = isUpdating ? 'Save Changes' : 'Post'; ui.setButtonState(button.id, 'Saving...', true); try { if (isUpdating) { await api.call('updatePost', { userId: state.currentUser.userId, postId: state.editingPostId, postContent: postContent }); } else { const postType = document.getElementById('post-type-select').value; const isStory = postType.startsWith('story'); const storyDuration = isStory ? parseInt(postType.split('-')[1]) : 0; await api.call('createPost', { userId: state.currentUser.userId, postContent, isStory, storyDuration }); } contentInput.value = ''; state.postImageUrl = null; state.editingPostId = null; ui.renderImagePreview(); button.textContent = 'Post'; document.getElementById('post-type-select').value = 'regular'; await core.refreshFeed(false); } catch (e) { alert(`Error: ${e.message}`); } finally { ui.setButtonState(button.id, originalButtonText, false); if (isUpdating) { button.textContent = 'Post'; state.editingPostId = null; } } },
                 enterEditMode(postId) { const post = state.posts.find(p => p.postId === postId); if (!post) return; const textContent = post.postContent.replace(/<br><img src=".*?" alt=".*?">/g, '').trim(); document.getElementById('post-content-input').value = textContent; document.getElementById('submit-post-btn').textContent = 'Save Changes'; state.editingPostId = postId; window.scrollTo({ top: 0, behavior: 'smooth' }); document.getElementById('post-content-input').focus(); },
@@ -1027,18 +1184,12 @@
                 async deletePost(postId) { if (!confirm("Delete this post?")) return; const postToDeleteIndex = state.posts.findIndex(p => p.postId === postId); if (postToDeleteIndex === -1) return; const postToDelete = state.posts[postToDeleteIndex]; state.posts.splice(postToDeleteIndex, 1); ui.render(); try { await api.call('deletePost', { postId, userId: state.currentUser.userId }); } catch(e) { alert(`Error: Could not delete post. ${e.message}`); state.posts.splice(postToDeleteIndex, 0, postToDelete); ui.render(); } },
                 async deleteComment(commentId) { if (!confirm("Delete this comment?")) return; let postIndex = -1, commentIndex = -1, commentToDelete = null; for (let i = 0; i < state.posts.length; i++) { const foundIndex = state.posts[i].comments.findIndex(c => c.commentId === commentId); if (foundIndex !== -1) { postIndex = i; commentIndex = foundIndex; commentToDelete = state.posts[i].comments[foundIndex]; break; } } if (postIndex === -1) return; state.posts[postIndex].comments.splice(commentIndex, 1); ui.render(); try { await api.call('deleteComment', { commentId, userId: state.currentUser.userId }); } catch(e) { alert(`Error: Could not delete comment. ${e.message}`); state.posts[postIndex].comments.splice(commentIndex, 0, commentToDelete); ui.render(); } },
                 async toggleFollow(followingId) { const followBtn = document.getElementById('follow-btn'); if (!followBtn) return; followBtn.disabled = true; try { const result = await api.call('toggleFollow', { followerId: state.currentUser.userId, followingId }); state.profileUser.relationship = result.newRelationship; const { user } = await api.call('getUserProfile', { userId: followingId, currentUserId: state.currentUser.userId }, 'GET'); state.profileUser = user; const isNowFollowing = result.newRelationship === 'Following' || result.newRelationship === 'Friends'; if (isNowFollowing) { if(!state.currentUserFollowingList.includes(followingId)) state.currentUserFollowingList.push(followingId); } else { state.currentUserFollowingList = state.currentUserFollowingList.filter(id => id !== followingId); } } catch (e) { alert(`Error: ${e.message}`); } finally { ui.renderProfilePage(); } },
-                async search(query) { const container = document.getElementById('search-results'); container.innerHTML = '<p style="text-align:center; color: var(--secondary-text-color);">Searching...</p>'; try { const results = await api.call('search', { query, currentUserId: state.currentUser.userId }, 'GET'); ui.renderSearchResults(results); } catch(e) { container.innerHTML = `<p class="error-message">Search failed: ${e.message}</p>`; }},
+                async search(query, containerId = 'search-results') { const container = document.getElementById(containerId); container.innerHTML = '<p style="text-align:center; color: var(--secondary-text-color);">Searching...</p>'; try { const results = await api.call('search', { query, currentUserId: state.currentUser.userId }, 'GET'); if(containerId === 'search-results') ui.renderSearchResults(results, containerId); else return results.users; } catch(e) { container.innerHTML = `<p class="error-message">Search failed: ${e.message}</p>`; return []; }},
                 async showProfile(userId, scrollToPostId = null) {
                     if (state.currentView !== 'profile') { state.feedScrollPosition = window.scrollY; }
                     state.scrollToPostId = scrollToPostId;
                     core.navigateTo('profile');
-                    
-                    if (userId === state.currentUser.userId) {
-                        state.profileUser = state.currentUser;
-                        ui.renderProfilePage();
-                        return; 
-                    }
-
+                    if (userId === state.currentUser.userId) { state.profileUser = state.currentUser; ui.renderProfilePage(); return; }
                     ui.showProfileSkeleton();
                     try {
                         const { user } = await api.call('getUserProfile', { userId, currentUserId: state.currentUser.userId }, 'GET');
@@ -1050,111 +1201,42 @@
                         if(e.message === "User not found") { setTimeout(() => core.navigateTo('feed'), 1500); }
                     }
                 },
-                async blockUser(userIdToBlock) {
-                    if (userIdToBlock === state.currentUser.userId) return;
-                    const userToBlock = state.posts.find(p => p.userId === userIdToBlock) || state.profileUser || state.blockedUsersList.find(u => u.userId === userIdToBlock);
-                    const userName = userToBlock ? userToBlock.displayName : 'this user';
-                    if (confirm(`Are you sure you want to block ${userName}? You will no longer see their posts, comments, or profile, and they will not see yours.`)) {
-                        try {
-                            await api.call('blockUser', { blockerId: state.currentUser.userId, blockedId: userIdToBlock });
-                            alert(`${userName} has been blocked.`);
-                            await core.refreshFeed(true);
-                            if (state.currentView === 'profile' && state.profileUser && state.profileUser.userId === userIdToBlock) {
-                                core.navigateTo('feed');
-                            }
-                        } catch (e) { alert(`Error: Could not block user. ${e.message}`); }
-                    }
-                },
-                async unblockUser(userIdToUnblock, event) {
-                    const unblockBtn = event.target.closest('.unblock-btn');
-                    const userToUnblock = state.blockedUsersList.find(u => u.userId === userIdToUnblock);
-                    if (!userToUnblock || !unblockBtn) return;
-                    
-                    unblockBtn.disabled = true;
-                    unblockBtn.textContent = 'Unblocking...';
-
-                    try {
-                        await api.call('blockUser', { blockerId: state.currentUser.userId, blockedId: userIdToUnblock });
-                        state.blockedUsersList = state.blockedUsersList.filter(u => u.userId !== userIdToUnblock);
-                        ui.renderSettingsPage();
-                    } catch(e) {
-                        alert(`Error unblocking user: ${e.message}`);
-                        unblockBtn.disabled = false;
-                        unblockBtn.textContent = 'Unblock';
-                    }
-                },
-                openReportModal(userId, postId = null) {
-                    state.reporting = { userId, postId };
-                    const user = state.posts.find(p => p.userId === userId) || state.profileUser;
-                    const title = document.getElementById('report-modal-title');
-                    title.textContent = postId ? `Report post by ${user.displayName}` : `Report ${user.displayName}`;
-                    ui.toggleModal('report', true);
-                },
-                async submitReport() {
-                    const reason = document.getElementById('report-reason-input').value.trim();
-                    if (!reason) { alert('Please provide a reason for the report.'); return; }
-                    ui.setButtonState('submit-report-btn', 'Submitting...', true);
-                    try {
-                        await api.call('reportUser', { reporterId: state.currentUser.userId, reportedId: state.reporting.userId, postId: state.reporting.postId, reason: reason });
-                        alert('Report submitted successfully. Thank you for helping keep Kangaroo safe.');
-                        ui.toggleModal('report', false);
-                    } catch (e) { alert(`Error: Could not submit report. ${e.message}`); } 
-                    finally { ui.setButtonState('submit-report-btn', 'Submit Report', false); }
-                },
+                async blockUser(userIdToBlock) { if (userIdToBlock === state.currentUser.userId) return; const userToBlock = state.posts.find(p => p.userId === userIdToBlock) || state.profileUser || state.blockedUsersList.find(u => u.userId === userIdToBlock); const userName = userToBlock ? userToBlock.displayName : 'this user'; if (confirm(`Are you sure you want to block ${userName}? You will no longer see their posts, comments, or profile, and they will not see yours.`)) { try { await api.call('blockUser', { blockerId: state.currentUser.userId, blockedId: userIdToBlock }); alert(`${userName} has been blocked.`); await core.refreshFeed(true); if (state.currentView === 'profile' && state.profileUser && state.profileUser.userId === userIdToBlock) { core.navigateTo('feed'); } } catch (e) { alert(`Error: Could not block user. ${e.message}`); } } },
+                async unblockUser(userIdToUnblock, event) { const unblockBtn = event.target.closest('.unblock-btn'); const userToUnblock = state.blockedUsersList.find(u => u.userId === userIdToUnblock); if (!userToUnblock || !unblockBtn) return; unblockBtn.disabled = true; unblockBtn.textContent = 'Unblocking...'; try { await api.call('blockUser', { blockerId: state.currentUser.userId, blockedId: userIdToUnblock }); state.blockedUsersList = state.blockedUsersList.filter(u => u.userId !== userIdToUnblock); ui.renderSettingsPage(); } catch(e) { alert(`Error unblocking user: ${e.message}`); unblockBtn.disabled = false; unblockBtn.textContent = 'Unblock'; } },
+                openReportModal(userId, postId = null) { state.reporting = { userId, postId }; const user = state.posts.find(p => p.userId === userId) || state.profileUser; const title = document.getElementById('report-modal-title'); title.textContent = postId ? `Report post by ${user.displayName}` : `Report ${user.displayName}`; ui.toggleModal('report', true); },
+                async submitReport() { const reason = document.getElementById('report-reason-input').value.trim(); if (!reason) { alert('Please provide a reason for the report.'); return; } ui.setButtonState('submit-report-btn', 'Submitting...', true); try { await api.call('reportUser', { reporterId: state.currentUser.userId, reportedId: state.reporting.userId, postId: state.reporting.postId, reason: reason }); alert('Report submitted successfully. Thank you for helping keep Kangaroo safe.'); ui.toggleModal('report', false); } catch (e) { alert(`Error: Could not submit report. ${e.message}`); } finally { ui.setButtonState('submit-report-btn', 'Submit Report', false); } },
                 showHashtagFeed(tag) { if (state.currentView !== 'hashtagFeed') { state.feedScrollPosition = window.scrollY; } core.navigateTo('hashtagFeed'); const titleEl = document.getElementById('hashtag-title'); const feedEl = document.getElementById('hashtag-feed'); const fullHashtag = `#${tag.toLowerCase()}`; titleEl.textContent = `Posts tagged with ${fullHashtag}`; const filteredPosts = state.posts.filter(post => (post.postContent || '').toLowerCase().includes(fullHashtag) ); ui.renderFeed(filteredPosts, feedEl, false); },
                 async showNotifications() { ui.toggleModal('notifications', true); ui.renderNotifications(); if(state.unreadNotificationCount > 0) { state.unreadNotificationCount = 0; core.updateNotificationDot(); try { await api.call('markNotificationsAsRead', { userId: state.currentUser.userId }); } catch (e) { console.error("Failed to mark notifications as read:", e); } } },
                 async deleteNotification(notificationId) { state.notifications = state.notifications.filter(n => n.notificationId !== notificationId); ui.renderNotifications(); try { await api.call('deleteNotification', { userId: state.currentUser.userId, notificationId }); } catch(e) { alert("Could not delete notification: " + e.message); core.refreshFeed(false); } },
-                async updatePostVisibility(e) {
-                    const newVisibility = e.target.value; const selectElement = e.target;
-                    selectElement.disabled = true;
-                    try {
-                        await api.call('updatePostVisibility', { userId: state.currentUser.userId, visibility: newVisibility });
-                        state.currentUser.postVisibility = newVisibility;
-                        localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
-                    } catch (err) {
-                        alert('Could not update setting: ' + err.message);
-                        selectElement.value = state.currentUser.postVisibility;
-                    } finally {
-                        selectElement.disabled = false;
-                    }
-                },
-                async updateProfilePrivacy(e) {
-                    const newPrivacy = e.target.checked ? 'private' : 'public'; const switchElement = e.target;
-                    switchElement.disabled = true;
-                    try {
-                        await api.call('updateProfilePrivacy', { userId: state.currentUser.userId, privacy: newPrivacy });
-                        state.currentUser.profilePrivacy = newPrivacy;
-                        localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
-                    } catch (err) {
-                        alert('Could not update setting: ' + err.message);
-                        switchElement.checked = state.currentUser.profilePrivacy === 'private';
-                    } finally {
-                        switchElement.disabled = false;
-                    }
-                },
+                async updatePostVisibility(e) { const newVisibility = e.target.value; const selectElement = e.target; selectElement.disabled = true; try { await api.call('updatePostVisibility', { userId: state.currentUser.userId, visibility: newVisibility }); state.currentUser.postVisibility = newVisibility; localStorage.setItem('currentUser', JSON.stringify(state.currentUser)); } catch (err) { alert('Could not update setting: ' + err.message); selectElement.value = state.currentUser.postVisibility; } finally { selectElement.disabled = false; } },
+                async updateProfilePrivacy(e) { const newPrivacy = e.target.checked ? 'private' : 'public'; const switchElement = e.target; switchElement.disabled = true; try { await api.call('updateProfilePrivacy', { userId: state.currentUser.userId, privacy: newPrivacy }); state.currentUser.profilePrivacy = newPrivacy; localStorage.setItem('currentUser', JSON.stringify(state.currentUser)); } catch (err) { alert('Could not update setting: ' + err.message); switchElement.checked = state.currentUser.profilePrivacy === 'private'; } finally { switchElement.disabled = false; } },
                 async loadMessagesView() { core.navigateTo('messages'); ui.renderMessagesPage(); },
-                async loadConversation(otherUserId) {
+                async loadConversation(otherUserId, isGroup) {
                     if (state.isConversationLoading) return;
                     state.isConversationLoading = true;
-
                     if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId);
                     
                     const convosListEl = document.getElementById('conversations-list');
                     convosListEl.classList.add('is-loading');
 
-                    state.currentConversation.otherUserId = otherUserId;
+                    state.currentConversation = { id: otherUserId, messages: [], isGroup };
                     const convo = state.conversations.find(c => c.otherUser.userId === otherUserId);
                     if (convo) convo.unreadCount = 0;
                     core.updateMessageDot();
                     document.querySelector('.messages-container').classList.add('show-chat-view');
                     ui.renderMessagesPage();
                     document.getElementById('conversation-view').innerHTML = '<div id="messages-list" style="display: flex; justify-content: center; align-items: center; height: 100%;"><p>Loading messages...</p></div>';
+                    
                     try {
-                        const { messages } = await api.call('getConversationHistory', { userId: state.currentUser.userId, otherUserId }, 'GET');
+                        const { messages, creatorId, members } = await api.call('getConversationHistory', { userId: state.currentUser.userId, otherUserId, isGroup }, 'GET');
                         state.currentConversation.messages = messages.map(m => ({...m, status: 'sent'}));
+                        if (isGroup) {
+                            state.currentConversation.creatorId = creatorId;
+                            state.currentConversation.members = members;
+                        }
                         ui.renderConversationHistory();
-                        api.call('markConversationAsRead', { userId: state.currentUser.userId, otherUserId });
-                        state.messagePollingIntervalId = setInterval(() => handlers.pollNewMessages(otherUserId), 5000);
+                        if (!isGroup) { api.call('markConversationAsRead', { userId: state.currentUser.userId, otherUserId }); }
+                        state.messagePollingIntervalId = setInterval(() => handlers.pollNewMessages(otherUserId, isGroup), 5000);
                     } catch (e) {
                         document.getElementById('conversation-view').innerHTML = `<div id="conversation-placeholder" class="error-message">Could not load conversation: ${e.message}</div>`;
                     } finally {
@@ -1165,11 +1247,11 @@
                 async sendMessage() {
                     const input = document.getElementById('message-input');
                     const messageContent = input.value.trim();
-                    const otherUserId = state.currentConversation.otherUserId;
-                    if (!messageContent || !otherUserId) return;
+                    const { id: recipientId, isGroup } = state.currentConversation;
+                    if (!messageContent || !recipientId) return;
 
                     const tempId = `temp_${Date.now()}`;
-                    const tempMessage = { messageId: tempId, senderId: state.currentUser.userId, messageContent, status: 'sending' };
+                    const tempMessage = { messageId: tempId, senderId: state.currentUser.userId, messageContent, status: 'sending', senderName: state.currentUser.displayName };
 
                     input.value = '';
                     input.disabled = true;
@@ -1183,60 +1265,132 @@
                     ui.renderConversationHistory();
 
                     try {
-                        const { confirmedMessage } = await api.call('sendMessage', { senderId: state.currentUser.userId, recipientId: otherUserId, messageContent });
+                        const { confirmedMessage } = await api.call('sendMessage', { senderId: state.currentUser.userId, recipientId, messageContent, isGroup });
                         const messageIndex = state.currentConversation.messages.findIndex(m => m.messageId === tempId);
-                        if (messageIndex > -1) {
-                            state.currentConversation.messages[messageIndex] = { ...confirmedMessage, status: 'sent' };
-                        } else {
-                            state.currentConversation.messages.push({ ...confirmedMessage, status: 'sent' });
-                        }
+                        if (messageIndex > -1) { state.currentConversation.messages[messageIndex] = { ...confirmedMessage, status: 'sent', senderName: state.currentUser.displayName }; }
                     } catch (e) {
                         alert(`Error: ${e.message}`);
                         const messageIndex = state.currentConversation.messages.findIndex(m => m.messageId === tempId);
-                        if (messageIndex > -1) {
-                            state.currentConversation.messages[messageIndex].status = 'failed';
-                        }
+                        if (messageIndex > -1) { state.currentConversation.messages[messageIndex].status = 'failed'; }
                     } finally {
                         ui.renderConversationHistory();
-                        const finalInput = document.getElementById('message-input');
-                        if (finalInput) { finalInput.disabled = false; finalInput.focus(); }
-                        const button = document.querySelector('#message-input-form button');
-                        if (button) button.disabled = false;
-                        
-                        if (state.currentView === 'messages' && state.currentConversation.otherUserId) {
-                            state.messagePollingIntervalId = setInterval(() => handlers.pollNewMessages(state.currentConversation.otherUserId), 5000);
-                        }
+                        const finalInput = document.getElementById('message-input'); if (finalInput) { finalInput.disabled = false; finalInput.focus(); }
+                        const button = document.querySelector('#message-input-form button'); if (button) button.disabled = false;
+                        if (state.currentView === 'messages' && state.currentConversation.id) { state.messagePollingIntervalId = setInterval(() => handlers.pollNewMessages(state.currentConversation.id, state.currentConversation.isGroup), 5000); }
                     }
                 },
                 async deleteMessage(messageId) { if (!confirm("Are you sure you want to unsend this message? This cannot be undone.")) return; const messageWrapper = document.querySelector(`.message-wrapper[data-message-id="${messageId}"]`); const messageStatus = document.querySelector(`.message-wrapper[data-message-id="${messageId}"] + .message-status`); if (!messageWrapper) return; messageWrapper.style.opacity = '0.5'; try { await api.call('deleteMessage', { userId: state.currentUser.userId, messageId }); const messageIndex = state.currentConversation.messages.findIndex(m => m.messageId === messageId); if (messageIndex > -1) { state.currentConversation.messages.splice(messageIndex, 1); } messageWrapper.remove(); if (messageStatus) messageStatus.remove(); } catch (e) { alert(`Error: Could not unsend message. ${e.message}`); messageWrapper.style.opacity = '1'; } },
-                async pollNewMessages(otherUserId, isForced = false) {
-                    if (state.currentView !== 'messages' || state.currentConversation.otherUserId !== otherUserId) {
-                        if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId);
-                        return;
-                    }
+                async pollNewMessages(otherUserId, isGroup) {
+                    if (state.currentView !== 'messages' || state.currentConversation.id !== otherUserId) { if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId); return; }
                     try {
-                        const { messages } = await api.call('getConversationHistory', { userId: state.currentUser.userId, otherUserId }, 'GET');
+                        const { messages } = await api.call('getConversationHistory', { userId: state.currentUser.userId, otherUserId, isGroup }, 'GET');
                         const pendingMessages = state.currentConversation.messages.filter(m => m.status === 'sending' || m.status === 'failed');
                         const confirmedIds = new Set(messages.map(m => m.messageId));
                         const uniquePending = pendingMessages.filter(pm => !confirmedIds.has(pm.messageId));
-
                         const newMessages = [...messages.map(m => ({...m, status: 'sent'})), ...uniquePending];
-
-                        if (isForced || newMessages.length !== state.currentConversation.messages.length) {
+                        if (newMessages.length !== state.currentConversation.messages.length) {
                             state.currentConversation.messages = newMessages;
                             ui.renderConversationHistory();
-                            api.call('markConversationAsRead', { userId: state.currentUser.userId, otherUserId });
+                            if (!isGroup) { api.call('markConversationAsRead', { userId: state.currentUser.userId, otherUserId }); }
                         }
-                    } catch (e) {
-                        console.error("Polling failed:", e.message);
-                    }
+                    } catch (e) { console.error("Polling failed:", e.message); }
                 },
-                async startConversationFromProfile(otherUserId) { core.navigateTo('messages'); const existingConvo = state.conversations.find(c => c.otherUser.userId === otherUserId); if (!existingConvo && state.profileUser && state.profileUser.userId === otherUserId) { const newConvo = { otherUser: { userId: state.profileUser.userId, displayName: state.profileUser.displayName, profilePictureUrl: state.profileUser.profilePictureUrl, isVerified: state.profileUser.isVerified }, lastMessage: '', timestamp: new Date().toISOString(), unreadCount: 0 }; state.conversations.unshift(newConvo); } await handlers.loadConversation(otherUserId); },
+                async startConversationFromProfile(otherUserId) { core.navigateTo('messages'); const existingConvo = state.conversations.find(c => c.otherUser.userId === otherUserId); if (!existingConvo && state.profileUser && state.profileUser.userId === otherUserId) { const newConvo = { otherUser: { userId: state.profileUser.userId, displayName: state.profileUser.displayName, profilePictureUrl: state.profileUser.profilePictureUrl, isVerified: state.profileUser.isVerified }, lastMessage: '', timestamp: new Date().toISOString(), unreadCount: 0 }; state.conversations.unshift(newConvo); } await handlers.loadConversation(otherUserId, false); },
+                openNewChatModal() { state.newChat.selectedUsers.clear(); ui.renderNewChatModal(); document.getElementById('new-chat-user-list').innerHTML = ''; ui.toggleModal('newChat', true); },
+                async searchUsersForNewChat(query) {
+                    const container = document.getElementById('new-chat-user-list');
+                    if (!query || query.trim().length < 2) { container.innerHTML = ''; return; }
+                    container.innerHTML = '<p style="text-align: center; color: var(--secondary-text-color);">Searching...</p>';
+                    try {
+                        const users = await handlers.search(query, 'new-chat-user-list');
+                        const friendsAndFollowers = new Set([...state.currentUserFollowingList, ...state.currentUserFollowersList]);
+                        const relevantUsers = users.filter(user => friendsAndFollowers.has(user.userId) && user.userId !== state.currentUser.userId);
+                        
+                        container.innerHTML = '';
+                        if (relevantUsers.length === 0) { container.innerHTML = '<p style="text-align: center; color: var(--secondary-text-color);">No matching friends found.</p>'; return; }
+                        
+                        relevantUsers.forEach(user => {
+                            if (state.newChat.selectedUsers.has(user.userId)) return;
+                            const userEl = document.createElement('div');
+                            userEl.className = 'new-chat-user-item';
+                            userEl.dataset.userId = user.userId;
+                            const pfpUrl = sanitizeHTML(user.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${user.username}`;
+                            userEl.innerHTML = `<img src="${pfpUrl}" class="pfp pfp-sm"><div><div>${sanitizeHTML(user.displayName)} ${String(user.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</div><div style="color:var(--secondary-text-color)">@${sanitizeHTML(user.username)}</div></div>`;
+                            userEl.onclick = () => { state.newChat.selectedUsers.set(user.userId, user); ui.renderNewChatModal(); userEl.remove(); };
+                            container.appendChild(userEl);
+                        });
+                    } catch(e) { container.innerHTML = `<p class="error-message">Search failed.</p>`; }
+                },
+                async createChatOrGroup() {
+                    const numSelected = state.newChat.selectedUsers.size;
+                    if (numSelected === 0) return;
+                    ui.setButtonState('create-chat-btn', 'Creating...', true);
+                    if (numSelected === 1) {
+                        const user = state.newChat.selectedUsers.values().next().value;
+                        ui.toggleModal('newChat', false); await handlers.loadConversation(user.userId, false);
+                    } else {
+                        const groupName = document.getElementById('new-chat-group-name').value.trim();
+                        if(!groupName) { alert("Please enter a group name."); ui.setButtonState('create-chat-btn', 'Create Group', false); return; }
+                        const memberIds = Array.from(state.newChat.selectedUsers.keys());
+                        try {
+                            const { newGroup } = await api.call('createGroup', { creatorId: state.currentUser.userId, groupName, memberIds });
+                            await core.refreshFeed(false);
+                            ui.toggleModal('newChat', false);
+                            await handlers.loadConversation(newGroup.groupId, true);
+                        } catch(e) { alert('Error creating group: ' + e.message); }
+                    }
+                    ui.setButtonState('create-chat-btn', 'Chat', false);
+                },
+                openGroupSettings() {
+                    state.groupEdit.membersToAdd.clear();
+                    state.groupEdit.membersToRemove.clear();
+                    ui.renderGroupSettingsModal();
+                    ui.toggleModal('groupSettings', true);
+                },
+                async leaveGroup() {
+                    if (!confirm("Are you sure you want to leave this group?")) return;
+                    try {
+                        await api.call('leaveGroup', { userId: state.currentUser.userId, groupId: state.currentConversation.id });
+                        ui.toggleModal('groupSettings', false);
+                        core.navigateTo('messages');
+                        await core.refreshFeed(false);
+                    } catch(e) { alert("Error leaving group: " + e.message); }
+                },
+                async deleteGroup() {
+                    if (!confirm("Are you sure you want to permanently delete this group for everyone? This cannot be undone.")) return;
+                    try {
+                        await api.call('deleteGroup', { userId: state.currentUser.userId, groupId: state.currentConversation.id });
+                        ui.toggleModal('groupSettings', false);
+                        core.navigateTo('messages');
+                        await core.refreshFeed(false);
+                    } catch(e) { alert("Error deleting group: " + e.message); }
+                },
+                async saveGroupChanges() {
+                     const changes = {
+                        groupName: document.getElementById('edit-group-name').value.trim(),
+                        membersToAdd: Array.from(state.groupEdit.membersToAdd),
+                        membersToRemove: Array.from(state.groupEdit.membersToRemove)
+                    };
+
+                    if (!changes.groupName) { alert("Group name cannot be empty."); return; }
+                    ui.setButtonState('save-group-changes-btn', 'Saving...', true);
+
+                    try {
+                        await api.call('editGroup', { userId: state.currentUser.userId, groupId: state.currentConversation.id, changes });
+                        ui.toggleModal('groupSettings', false);
+                        await core.refreshFeed(true); // Force full refresh
+                        await handlers.loadConversation(state.currentConversation.id, true);
+                    } catch (e) {
+                        alert("Error saving changes: " + e.message);
+                    } finally {
+                        ui.setButtonState('save-group-changes-btn', 'Save Changes', false);
+                    }
+                }
             };
 
             const core = {
                 navigateTo(view) { 
-                    if (state.currentView === 'messages' && view !== 'messages') { if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId); state.messagePollingIntervalId = null; state.currentConversation.otherUserId = null; document.querySelector('.messages-container').classList.remove('show-chat-view'); }
+                    if (state.currentView === 'messages' && view !== 'messages') { if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId); state.messagePollingIntervalId = null; state.currentConversation.id = null; document.querySelector('.messages-container').classList.remove('show-chat-view'); }
                     if (state.backgroundPosts) { state.posts = state.backgroundPosts; state.backgroundPosts = null; } 
                     state.currentView = view; 
                     ui.render(); 
@@ -1272,7 +1426,7 @@
                         state.posts = posts;
                         state.conversations = conversations;
                         state.currentUserFollowingList = currentUserFollowingList;
-                        state.currentUserFollowersList = currentUserFollowersList;
+                        state.currentUserFollowersList = currentUserFollowersList || [];
                         state.blockedUsersList = blockedUsersList || [];
                         const { notifications } = notificationsResult;
                         state.notifications = notifications;
@@ -1293,42 +1447,24 @@
                 logout(forceReload = true) { localStorage.removeItem('currentUser'); state.currentUser = null; if (state.backgroundRefreshIntervalId) clearInterval(state.backgroundRefreshIntervalId); if (state.storyUpdateIntervalId) clearInterval(state.storyUpdateIntervalId); if (state.banCountdownIntervalId) clearInterval(state.banCountdownIntervalId); if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId); state.backgroundRefreshIntervalId = null; state.storyUpdateIntervalId = null; state.banCountdownIntervalId = null; state.messagePollingIntervalId = null; if(forceReload) { window.location.reload(); } },
                 setupEventListeners() {
                     let searchTimeout;
+                    let newChatSearchTimeout;
+                    let groupAddSearchTimeout;
                     document.getElementById('show-register-link').addEventListener('click', () => { document.getElementById('login-form').classList.add('hidden'); document.getElementById('register-form').classList.remove('hidden'); });
                     document.getElementById('show-login-link').addEventListener('click', () => { document.getElementById('register-form').classList.add('hidden'); document.getElementById('login-form').classList.remove('hidden'); });
                     document.getElementById('login-btn').addEventListener('click', handlers.login); document.getElementById('register-btn').addEventListener('click', handlers.register); document.getElementById('submit-post-btn').addEventListener('click', handlers.createPost); document.getElementById('save-profile-btn').addEventListener('click', handlers.updateProfile); 
                     document.getElementById('logo-btn').addEventListener('click', () => core.navigateTo('feed'));
                     document.getElementById('home-btn').addEventListener('click', () => core.navigateTo('feed'));
-                    document.getElementById('settings-btn').addEventListener('click', (e) => {
-                        ui.renderProfileShortcutModal();
-                        const btnRect = e.currentTarget.getBoundingClientRect();
-                        const position = {};
-                        const isMobile = window.innerWidth <= 768;
-
-                        if (isMobile) {
-                            position.bottom = (window.innerHeight - btnRect.top) + 8;
-                        } else {
-                            position.top = btnRect.bottom + 8;
-                        }
-                        position.right = window.innerWidth - btnRect.right;
-                        
-                        ui.toggleModal('profileShortcut', true, position);
-                    });
+                    document.getElementById('settings-btn').addEventListener('click', (e) => { ui.renderProfileShortcutModal(); const btnRect = e.currentTarget.getBoundingClientRect(); const position = {}; const isMobile = window.innerWidth <= 768; if (isMobile) { position.bottom = (window.innerHeight - btnRect.top) + 8; } else { position.top = btnRect.bottom + 8; } position.right = window.innerWidth - btnRect.right; ui.toggleModal('profileShortcut', true, position); });
                     document.getElementById('search-btn').addEventListener('click', () => ui.toggleModal('search', true));
                     document.getElementById('notifications-btn').addEventListener('click', handlers.showNotifications);
                     document.getElementById('messages-btn').addEventListener('click', () => handlers.loadMessagesView());
-                    document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => { 
-                        const modal = e.target.closest('.modal'); 
-                        if(modal) {
-                            const modalName = modal.id.replace('-modal', '').replace(/-(\w)/g, (match, p1) => p1.toUpperCase());
-                            ui.toggleModal(modalName, false); 
-                        }
-                    }));
+                    document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => { const modal = e.target.closest('.modal'); if(modal) { const modalName = modal.id.replace('-modal', '').replace(/-(\w)/g, (match, p1) => p1.toUpperCase()); ui.toggleModal(modalName, false); } }));
                     document.getElementById('logout-btn').addEventListener('click', core.logout);
                     document.getElementById('suspended-logout-btn').addEventListener('click', core.logout);
                     document.getElementById('outage-logout-btn').addEventListener('click', core.logout);
                     document.getElementById('theme-switch').addEventListener('change', (e) => { const newTheme = e.target.checked ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', newTheme); localStorage.setItem('theme', newTheme); });
                     document.getElementById('back-to-profile-btn').addEventListener('click', () => { handlers.showProfile(state.profileUser.userId) });
-                    document.getElementById('search-input').addEventListener('input', (e) => { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => handlers.search(e.target.value), 300); });
+                    document.getElementById('search-input').addEventListener('input', (e) => { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => handlers.search(e.target.value, 'search-results'), 300); });
                     document.getElementById('post-visibility-select').addEventListener('change', handlers.updatePostVisibility);
                     document.getElementById('privacy-switch').addEventListener('change', handlers.updateProfilePrivacy);
                     document.getElementById('add-image-btn').addEventListener('click', () => ui.toggleModal('imageUrl', true));
@@ -1337,19 +1473,22 @@
                     document.getElementById('submit-report-btn').addEventListener('click', handlers.submitReport);
                     document.getElementById('create-post-form').addEventListener('click', (e) => { if (e.target.id === 'remove-image-btn') { state.postImageUrl = null; ui.renderImagePreview(); } });
                     document.getElementById('notifications-list').addEventListener('click', (e) => { const item = e.target.closest('.notification-item'); if(!item) return; if(e.target.closest('.delete-notification-btn')) { handlers.deleteNotification(item.dataset.notificationId); return; } const clickableArea = e.target.closest('.notification-item-clickable'); if (clickableArea) { ui.toggleModal('notifications', false); const notification = state.notifications.find(n => n.notificationId === item.dataset.notificationId); if (!notification) return; if (notification.postAuthorId && notification.postId && notification.postId !== 'null') { handlers.showProfile(notification.postAuthorId, notification.postId); } else if (notification.actorUserId) { handlers.showProfile(notification.actorUserId); } } });
-                    document.getElementById('edit-profile-view').addEventListener('click', e => {
-                        const choice = e.target.closest('#pfp-choices-gallery img');
-                        if (choice) {
-                            document.getElementById('edit-pfp-url').value = choice.dataset.url;
-                            document.querySelectorAll('#pfp-choices-gallery img').forEach(img => img.classList.remove('selected'));
-                            choice.classList.add('selected');
-                        }
-                    });
+                    document.getElementById('edit-profile-view').addEventListener('click', e => { const choice = e.target.closest('#pfp-choices-gallery img'); if (choice) { document.getElementById('edit-pfp-url').value = choice.dataset.url; document.querySelectorAll('#pfp-choices-gallery img').forEach(img => img.classList.remove('selected')); choice.classList.add('selected'); } });
+                    
+                    document.getElementById('new-chat-user-search').addEventListener('input', (e) => { clearTimeout(newChatSearchTimeout); newChatSearchTimeout = setTimeout(() => handlers.searchUsersForNewChat(e.target.value), 300); });
+                    document.getElementById('new-chat-selected-users').addEventListener('click', (e) => { const removeBtn = e.target.closest('button'); if(removeBtn) { state.newChat.selectedUsers.delete(removeBtn.dataset.userId); ui.renderNewChatModal(); } });
+                    document.getElementById('create-chat-btn').addEventListener('click', handlers.createChatOrGroup);
+                    document.getElementById('leave-group-btn').addEventListener('click', handlers.leaveGroup);
+                    document.getElementById('delete-group-btn').addEventListener('click', handlers.deleteGroup);
+                    document.getElementById('save-group-changes-btn').addEventListener('click', handlers.saveGroupChanges);
+                    document.getElementById('group-members-list').addEventListener('click', (e) => { const removeBtn = e.target.closest('.remove-member-btn'); if(removeBtn) { state.groupEdit.membersToRemove.add(removeBtn.dataset.userId); removeBtn.closest('.group-member-item').style.display = 'none'; }});
+                    document.getElementById('edit-group-add-user-search').addEventListener('input', (e) => { clearTimeout(groupAddSearchTimeout); groupAddSearchTimeout = setTimeout(() => handlers.searchUsersForGroupEdit(e.target.value), 300); });
+                    
                     document.body.addEventListener('click', (e) => {
                         const target = e.target;
-                        if (!modals.profileShortcut.classList.contains('hidden') && !target.closest('#profile-shortcut-modal .modal-content') && !target.closest('#settings-btn')) {
-                            ui.toggleModal('profileShortcut', false);
-                        }
+                        if (target.closest('#new-chat-btn')) { handlers.openNewChatModal(); return; }
+                        if (target.closest('#group-settings-btn')) { handlers.openGroupSettings(); return; }
+                        if (!modals.profileShortcut.classList.contains('hidden') && !target.closest('#profile-shortcut-modal .modal-content') && !target.closest('#settings-btn')) { ui.toggleModal('profileShortcut', false); }
                         const optionsBtn = target.closest('.options-btn');
                         if (optionsBtn) { e.preventDefault(); const menu = optionsBtn.nextElementSibling; const isHidden = menu.classList.contains('hidden'); document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden')); if (isHidden) menu.classList.remove('hidden'); return; }
                         if (!target.closest('.options-menu')) { document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden')); }
@@ -1358,22 +1497,11 @@
                             const profileShortcutModal = target.closest('#profile-shortcut-modal');
                             if (profileShortcutModal) {
                                 const action = actionButton.dataset.action;
-                                if (action === 'go-to-profile') {
-                                    e.preventDefault();
-                                    const userId = actionButton.dataset.userId;
-                                    ui.toggleModal('profileShortcut', false);
-                                    handlers.showProfile(userId);
-                                } else if (action === 'go-to-settings') {
-                                    e.preventDefault();
-                                    ui.toggleModal('profileShortcut', false);
-                                    core.navigateTo('settings');
-                                }
+                                if (action === 'go-to-profile') { e.preventDefault(); const userId = actionButton.dataset.userId; ui.toggleModal('profileShortcut', false); handlers.showProfile(userId); }
+                                else if (action === 'go-to-settings') { e.preventDefault(); ui.toggleModal('profileShortcut', false); core.navigateTo('settings'); }
                                 return;
                             }
-
-                            const action = actionButton.dataset.action;
-                            const postEl = actionButton.closest('.post');
-                            const commentEl = actionButton.closest('.comment');
+                            const action = actionButton.dataset.action; const postEl = actionButton.closest('.post'); const commentEl = actionButton.closest('.comment');
                             if (action === 'delete-post') handlers.deletePost(postEl.dataset.postId);
                             else if (action === 'delete-comment') handlers.deleteComment(commentEl.dataset.commentId);
                             else if (action === 'edit-post') handlers.enterEditMode(postEl.dataset.postId);
@@ -1386,8 +1514,7 @@
                         }
                         
                         if (target.closest('[data-nav="feed"]')) { e.preventDefault(); return core.navigateTo('feed'); }
-                        const hashtagLink = target.closest('.hashtag-link');
-                        if (hashtagLink) { e.preventDefault(); handlers.showHashtagFeed(hashtagLink.dataset.hashtag); return; }
+                        const hashtagLink = target.closest('.hashtag-link'); if (hashtagLink) { e.preventDefault(); handlers.showHashtagFeed(hashtagLink.dataset.hashtag); return; }
                         const profileLink = target.closest('.post-header, .comment-author, .search-result-user, #conversation-header .profile-link, #settings-profile-link');
                         if (profileLink && !target.closest('.post-options')) {
                              const userElement = profileLink.closest('[data-user-id]');
@@ -1395,13 +1522,10 @@
                         }
                         if (target.closest('#edit-profile-btn')) return core.navigateTo('editProfile');
                         if (target.closest('#follow-btn')) return handlers.toggleFollow(state.profileUser.userId);
-                        const likeBtn = target.closest('.like-btn');
-                        if (likeBtn) return handlers.toggleLike(target.closest('.post').dataset.postId);
+                        const likeBtn = target.closest('.like-btn'); if (likeBtn) return handlers.toggleLike(target.closest('.post').dataset.postId);
                         if (target.closest('#message-user-btn')) return handlers.startConversationFromProfile(state.profileUser.userId);
-                        const conversationItem = target.closest('.conversation-item');
-                        if (conversationItem) { const otherUserId = conversationItem.dataset.userId; if (otherUserId && otherUserId !== state.currentConversation.otherUserId) { handlers.loadConversation(otherUserId); } return; }
-                        const backToConvosBtn = target.closest('#back-to-convos-btn');
-                        if (backToConvosBtn) { document.querySelector('.messages-container').classList.remove('show-chat-view'); if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId); state.messagePollingIntervalId = null; state.currentConversation.otherUserId = null; }
+                        const conversationItem = target.closest('.conversation-item'); if (conversationItem) { const otherUserId = conversationItem.dataset.userId; const isGroup = conversationItem.dataset.isGroup === 'true'; if (otherUserId && otherUserId !== state.currentConversation.id) { handlers.loadConversation(otherUserId, isGroup); } return; }
+                        const backToConvosBtn = target.closest('#back-to-convos-btn'); if (backToConvosBtn) { document.querySelector('.messages-container').classList.remove('show-chat-view'); if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId); state.messagePollingIntervalId = null; state.currentConversation.id = null; }
                     });
                     document.body.addEventListener('submit', (e) => { const commentForm = e.target.closest('.comment-form'); if(commentForm) { e.preventDefault(); const input = commentForm.querySelector('input'); handlers.addComment(e.target.closest('.post').dataset.postId, input.value); input.value = ''; } const messageForm = e.target.closest('#message-input-form'); if(messageForm) { e.preventDefault(); handlers.sendMessage(); } });
                     document.getElementById('auth-view').addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; const activeForm = !document.getElementById('login-form').classList.contains('hidden') ? document.getElementById('login-form') : document.getElementById('register-form'); e.preventDefault(); const inputs = [...activeForm.querySelectorAll('input')]; const currentInputIndex = inputs.findIndex(input => input === document.activeElement); if (currentInputIndex > -1 && currentInputIndex < inputs.length - 1) { inputs[currentInputIndex + 1].focus(); } else { activeForm.querySelector('button.primary').click(); } });
