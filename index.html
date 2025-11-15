@@ -104,7 +104,7 @@
         .comment-form input { flex-grow: 1; border: none; padding: 8px; background-color: transparent; color: var(--primary-text-color); font-size: 14px; }
         .comment-form button { border: none; background: none; color: var(--accent-color); font-weight: 600; }
         .post-options { position: relative; margin-left: auto; }
-        .options-btn { background: none; border: none; cursor: pointer; color: var(--secondary-text-color); padding: 4px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .options-btn { background: none; border: none; cursor: pointer; color: var(--secondary-text-color); padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         .options-btn:hover { background-color: var(--border-color); color: var(--primary-text-color); }
         .options-menu { position: absolute; top: 100%; right: 0; background-color: var(--secondary-bg-color); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 12px var(--shadow-color); z-index: 10; min-width: 150px; overflow: hidden; display: flex; flex-direction: column; }
         .options-menu button { background: none; border: none; box-shadow: none; text-align: left; padding: 10px 15px; width: 100%; border-radius: 0; font-size: 14px; border-bottom: 1px solid var(--border-color); color: var(--primary-text-color); }
@@ -217,7 +217,7 @@
         }
         .profile-display-name-ig {
             font-weight: 700;
-            font-size: 18px; /* MODIFIED */
+            font-size: 18px;
             margin-bottom: 5px;
             display: flex;
             align-items: center;
@@ -225,7 +225,7 @@
         .profile-description-ig {
             line-height: 1.4;
             font-size: 15px;
-            white-space: pre-wrap; /* MODIFIED */
+            white-space: pre-wrap;
         }
         
         @media (max-width: 500px) {
@@ -456,7 +456,7 @@
                 border-bottom: none;
                 border-top: 1px solid var(--border-color);
                 padding-bottom: env(safe-area-inset-bottom);
-                min-height: 65px; 
+                height: 65px; 
                 align-items: flex-start;
                 padding-top: 8px;
             }
@@ -1330,30 +1330,35 @@
                 async showProfile(userId, scrollToPostId = null) {
                     if (state.currentView !== 'profile') state.feedScrollPosition = window.scrollY;
                     state.scrollToPostId = scrollToPostId;
-                    core.navigateTo('profile');
                     
+                    core.navigateTo('profile');
+
                     const cachedUser = state.userProfileCache[userId];
                     if (cachedUser) {
                         state.profileUser = cachedUser;
-                        ui.renderProfilePage(); // Render immediately with cached data
+                        ui.renderProfilePage();
                     } else {
+                        state.profileUser = null; 
                         ui.showProfileSkeleton();
                     }
 
                     try {
                         const { user } = await api.call('getUserProfile', { userId, currentUserId: state.currentUser.userId }, 'GET');
-                        state.userProfileCache[userId] = { ...(state.userProfileCache[userId] || {}), ...user }; // Update cache
+                        state.userProfileCache[userId] = { ...(state.userProfileCache[userId] || {}), ...user };
+
                         if (state.currentView === 'profile' && (!state.profileUser || state.profileUser.userId === userId)) {
                             state.profileUser = user;
-                            ui.renderProfilePage(); // Re-render with full, fresh data
+                            ui.renderProfilePage();
                         }
                     } catch (e) {
                         console.error("Failed to load profile:", e);
                         if (state.currentView === 'profile' && (!state.profileUser || state.profileUser.userId === userId)) {
                             document.getElementById('profile-content').innerHTML = `<p class="error-message" style="text-align:center;">Could not load profile: ${e.message}</p>`;
                             document.getElementById('profile-feed').innerHTML = '';
+                            if (e.message === "User not found") {
+                                setTimeout(() => core.navigateTo('feed'), 1500);
+                            }
                         }
-                        if(e.message === "User not found") { setTimeout(() => core.navigateTo('feed'), 1500); }
                     }
                 },
                 async blockUser(userIdToBlock) { if (userIdToBlock === state.currentUser.userId) return; const userToBlock = state.posts.find(p => p.userId === userIdToBlock) || state.profileUser || state.blockedUsersList.find(u => u.userId === userIdToBlock); const userName = userToBlock ? userToBlock.displayName : 'this user'; if (confirm(`Are you sure you want to block ${userName}? You will no longer see their posts, comments, or profile, and they will not see yours.`)) { try { await api.call('blockUser', { blockerId: state.currentUser.userId, blockedId: userIdToBlock }); alert(`${userName} has been blocked.`); await core.refreshFeed(true); if (state.currentView === 'profile' && state.profileUser && state.profileUser.userId === userIdToBlock) { core.navigateTo('feed'); } } catch (e) { alert(`Error: Could not block user. ${e.message}`); } } },
@@ -1620,16 +1625,18 @@
                         } else { throw new Error("Could not validate user session."); }
                         
                         state.posts = posts;
+                        state.currentUserFollowingList = currentUserFollowingList; // Set this first
 
                         posts.forEach(post => {
                             if (!state.userProfileCache[post.userId]) {
                                 const { comments, likes, postContent, postId, isStory, expiryTimestamp, storyDuration, timestamp, ...authorData } = post;
+                                const isFollowing = state.currentUserFollowingList.includes(post.userId);
+                                authorData.relationship = isFollowing ? 'Following' : 'none';
                                 state.userProfileCache[post.userId] = authorData;
                             }
                         });
                         
                         state.conversations = conversations;
-                        state.currentUserFollowingList = currentUserFollowingList;
                         state.currentUserFollowersList = currentUserFollowersList || [];
                         state.blockedUsersList = blockedUsersList || [];
                         const { notifications } = notificationsResult;
