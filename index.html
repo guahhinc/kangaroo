@@ -42,6 +42,8 @@
         }
         #app-wrapper {
             flex-grow: 1;
+            display: flex;
+            flex-direction: column;
         }
         .view.active {
             flex-grow: 1;
@@ -370,11 +372,7 @@
         .message-options .options-btn .material-symbols-rounded { font-size: 18px; vertical-align: -4px; }
         .message-options .options-menu { width: 120px; top: 50%; right: 100%; transform: translateY(-50%); margin-right: 8px; }
 
-        #settings-btn .pfp-sm {
-            width: 32px;
-            height: 32px;
-            vertical-align: middle;
-        }
+        #profile-nav-btn .pfp-sm { width: 28px; height: 28px; }
         .modal#profile-shortcut-modal {
             background: transparent;
             backdrop-filter: none;
@@ -471,7 +469,7 @@
                 align-items: flex-start;
                 padding-top: 8px;
             }
-            header .logo {
+            header .logo, #settings-nav-btn {
                 display: none;
             }
             .header-actions {
@@ -502,7 +500,6 @@
                 border-bottom: none;
                 border-right: 1px solid var(--border-color);
                 padding: 20px;
-                gap: 20px;
             }
             header .logo {
                 height: 40px;
@@ -513,6 +510,7 @@
                 align-items: stretch;
                 gap: 10px;
                 width: 100%;
+                height: 100%;
             }
             .header-icon {
                 display: flex;
@@ -533,7 +531,7 @@
             .header-icon-label {
                 display: inline;
             }
-            #settings-btn {
+            #settings-nav-btn {
                 margin-top: auto; /* Pushes settings to the bottom */
             }
             body.logged-in {
@@ -569,9 +567,13 @@
                 <span class="header-icon-label">Notifications</span>
                 <span id="notification-dot"></span>
             </div>
-            <div class="header-icon" id="settings-btn">
-                <span class="material-symbols-rounded">more_horiz</span>
-                <span class="header-icon-label">Profile & Settings</span>
+            <div class="header-icon" id="profile-nav-btn">
+                <img id="nav-pfp" class="pfp pfp-sm" src="" style="width: 28px; height: 28px; vertical-align: middle;">
+                <span class="header-icon-label">Profile</span>
+            </div>
+            <div class="header-icon" id="settings-nav-btn">
+                <span class="material-symbols-rounded">settings</span>
+                <span class="header-icon-label">Settings</span>
             </div>
         </div>
     </header>
@@ -889,7 +891,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // ===== IMPORTANT: This URL MUST match your latest deployment =====
-            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzoGWFwlne8CHp95PAg8rH35mHxVT75TL06GOukS-hwRI5tHzn5WmG-lZHl5ZP2UW0d/exec';
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw3umla66CJsfDw6HNEIe3unU7SNc2I5cy-ulEqJ8v_p-0OAa3icPHTnGoMWkU1UEqE/exec';
 
             const pfpChoices = [
                 'https://img.freepik.com/free-psd/close-up-delicious-apple_23-2151868338.jpg?semt=ais_hybrid&w=740&q=80',
@@ -1743,11 +1745,9 @@
                             state.userProfileCache[currentUserData.userId] = currentUserData;
                             localStorage.setItem('currentUser', JSON.stringify(state.currentUser)); 
 
-                            const settingsBtn = document.getElementById('settings-btn');
-                            if (settingsBtn) {
-                                const pfpUrl = sanitizeHTML(state.currentUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${state.currentUser.username}`;
-                                const label = settingsBtn.querySelector('.header-icon-label').outerHTML;
-                                settingsBtn.innerHTML = `<img src="${pfpUrl}" class="pfp pfp-sm">` + label;
+                            const navPfp = document.getElementById('nav-pfp');
+                            if (navPfp) {
+                                navPfp.src = sanitizeHTML(state.currentUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${state.currentUser.username}`;
                             }
                         } else { throw new Error("Could not validate user session."); }
                         
@@ -1792,21 +1792,25 @@
                     document.getElementById('login-btn').addEventListener('click', handlers.login); document.getElementById('register-btn').addEventListener('click', handlers.register); document.getElementById('submit-post-btn').addEventListener('click', handlers.createPost); document.getElementById('save-profile-btn').addEventListener('click', handlers.updateProfile); 
                     document.getElementById('logo-btn').addEventListener('click', () => core.navigateTo('feed'));
                     document.getElementById('home-btn').addEventListener('click', () => core.navigateTo('feed'));
-                    document.getElementById('settings-btn').addEventListener('click', (e) => {
-                        ui.renderProfileShortcutModal();
-                        const btnRect = e.currentTarget.getBoundingClientRect();
-                        const position = {};
+                    
+                    document.getElementById('profile-nav-btn').addEventListener('click', (e) => {
                         const isMobile = window.innerWidth <= 1023;
                         if (isMobile) {
-                            position.bottom = (window.innerHeight - btnRect.top) + 8;
-                            position.right = window.innerWidth - btnRect.right;
+                            ui.renderProfileShortcutModal();
+                            const btnRect = e.currentTarget.getBoundingClientRect();
+                            const position = {
+                                bottom: (window.innerHeight - btnRect.top) + 8,
+                                right: window.innerWidth - btnRect.right,
+                            };
+                            ui.toggleModal('profileShortcut', true, position);
                         } else {
-                            position.top = btnRect.top;
-                            position.left = btnRect.right + 8;
+                            handlers.showProfile(state.currentUser.userId);
                         }
-                        ui.toggleModal('profileShortcut', true, position);
                     });
+
+                    document.getElementById('settings-nav-btn').addEventListener('click', () => core.navigateTo('settings'));
                     document.getElementById('search-btn').addEventListener('click', () => core.navigateTo('search'));
+                    
                     const searchInput = document.getElementById('search-input');
                     if (searchInput) {
                         searchInput.addEventListener('input', (e) => {
@@ -1856,7 +1860,7 @@
                         const target = e.target;
                         if (target.closest('#new-chat-btn')) { handlers.openNewChatModal(); return; }
                         if (target.closest('#group-settings-btn')) { handlers.openGroupSettings(); return; }
-                        if (!modals.profileShortcut.classList.contains('hidden') && !target.closest('#profile-shortcut-modal .modal-content') && !target.closest('#settings-btn')) { ui.toggleModal('profileShortcut', false); }
+                        if (!modals.profileShortcut.classList.contains('hidden') && !target.closest('#profile-shortcut-modal .modal-content') && !target.closest('#profile-nav-btn')) { ui.toggleModal('profileShortcut', false); }
                         const optionsBtn = target.closest('.options-btn');
                         if (optionsBtn) { e.preventDefault(); const menu = optionsBtn.nextElementSibling; const isHidden = menu.classList.contains('hidden'); document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden')); if (isHidden) menu.classList.remove('hidden'); return; }
                         if (!target.closest('.options-menu')) { document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden')); }
@@ -1907,7 +1911,7 @@
                     document.getElementById('auth-view').addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; const activeForm = !document.getElementById('login-form').classList.contains('hidden') ? document.getElementById('login-form') : document.getElementById('register-form'); e.preventDefault(); const inputs = [...activeForm.querySelectorAll('input')]; const currentInputIndex = inputs.findIndex(input => input === document.activeElement); if (currentInputIndex > -1 && currentInputIndex < inputs.length - 1) { inputs[currentInputIndex + 1].focus(); } else { activeForm.querySelector('button.primary').click(); } });
                 },
                 async initializeApp() { const savedUser = JSON.parse(localStorage.getItem('currentUser')); if (!savedUser) { return core.navigateTo('auth'); } state.currentUser = savedUser; core.navigateTo('feed'); ui.showFeedSkeleton(document.getElementById('feed')); try { await core.refreshFeed(false); core.startStoryCountdownInterval(); } catch (error) { alert(`Session error: ${error.message}. Please log in again.`); core.logout(); } },
-                main() { core.setupEventListeners(); const savedTheme = localStorage.getItem('theme') || 'light'; document.documentElement.setAttribute('data-theme', savedTheme); document.getElementById('theme-switch').checked = savedTheme === 'dark'; if (localStorage.getItem('currentUser')) { core.initializeApp(); } else { core.navigateTo('auth'); } }
+                main() { core.setupEventListeners(); const savedTheme = localStorage.getItem('theme') || 'dark'; document.documentElement.setAttribute('data-theme', savedTheme); document.getElementById('theme-switch').checked = savedTheme === 'dark'; if (localStorage.getItem('currentUser')) { core.initializeApp(); } else { core.navigateTo('auth'); } }
             };
             
             const formatTimestamp = (post) => {
