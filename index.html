@@ -889,7 +889,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // ===== IMPORTANT: This URL MUST match your latest deployment =====
-            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMve8GsLY42bVtf-YaEK9lljW8NhQiMHBq8TpLc5wgx0Xe_Xccy4tEza89qRXuEoPM/exec';
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzoGWFwlne8CHp95PAg8rH35mHxVT75TL06GOukS-hwRI5tHzn5WmG-lZHl5ZP2UW0d/exec';
 
             const pfpChoices = [
                 'https://img.freepik.com/free-psd/close-up-delicious-apple_23-2151868338.jpg?semt=ais_hybrid&w=740&q=80',
@@ -1643,7 +1643,17 @@
                     ui.setButtonState('create-chat-btn', 'Creating...', true);
                     if (numSelected === 1) {
                         const user = state.newChat.selectedUsers.values().next().value;
-                        ui.toggleModal('newChat', false); await handlers.loadConversation(user.userId, false);
+                        ui.toggleModal('newChat', false);
+                        const existingConvo = state.conversations.find(c => !c.otherUser.isGroup && c.otherUser.userId === user.userId);
+                        if (!existingConvo) {
+                            state.conversations.unshift({
+                                otherUser: { ...user, isGroup: false },
+                                lastMessage: '',
+                                timestamp: new Date().toISOString(),
+                                unreadCount: 0
+                            });
+                        }
+                        await handlers.loadConversation(user.userId, false);
                     } else {
                         const groupName = document.getElementById('new-chat-group-name').value.trim();
                         if(!groupName) { alert("Please enter a group name."); ui.setButtonState('create-chat-btn', 'Create Group', false); return; }
