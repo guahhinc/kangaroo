@@ -86,8 +86,8 @@
         #global-banner { position: fixed; top: env(safe-area-inset-top); left: 0; right: 0; background-color: var(--primary-text-color); color: var(--primary-bg-color); text-align: center; padding: 8px 16px; font-size: 14px; font-weight: 600; z-index: 11; line-height: 1.4; transition: transform 0.3s ease-in-out, left 0.3s ease-in-out; }
         #global-banner.hidden { transform: translateY(-100%); }
         
-        /* Feed Tabs & Swipe Animation */
-        .feed-nav { display: flex; border-bottom: 1px solid var(--border-color); margin: 20px 0; }
+        /* ===== MODIFICATION: Removed top margin to close gap ===== */
+        .feed-nav { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
         .feed-nav-tabs { display: flex; flex-grow: 1; }
         .feed-nav-tab { flex: 1; text-align: center; padding: 14px 0; font-weight: 600; cursor: pointer; color: var(--secondary-text-color); border-bottom: 2px solid transparent; }
         .feed-nav-tab.active { color: var(--primary-text-color); border-bottom-color: var(--accent-color); }
@@ -116,7 +116,8 @@
         .post-header-info { flex-grow: 1; }
         .post-display-name { font-weight: 600; font-size: 16px; display: inline-flex; align-items: center; }
         .post-timestamp { font-size: 14px; color: var(--secondary-text-color); margin-left: 8px; font-weight: 400; }
-        .post-content { padding: 0 16px 12px; font-size: 16px; white-space: pre-wrap; word-wrap: break-word; line-height: 1.5; }
+        /* ===== MODIFICATION: Added cursor pointer for post detail view ===== */
+        .post-content { padding: 0 16px 12px; font-size: 16px; white-space: pre-wrap; word-wrap: break-word; line-height: 1.5; cursor: pointer; }
         .post-content img { max-width: 100%; border-radius: 12px; margin-top: 10px; }
         .post-actions { padding: 8px 16px; display: flex; align-items: center; gap: 10px; }
         .like-btn { font-size: 26px; background: none; color: var(--primary-text-color); padding: 0; }
@@ -473,6 +474,47 @@
         #new-chat-btn .material-symbols-rounded { font-size: 28px; vertical-align: -2px; }
         #conversation-header .options-btn { margin-left: auto; }
         
+        /* ===== ADDITION: Pull to Refresh styles ===== */
+        #main-app-view { position: relative; } /* Needed for indicator positioning */
+        #pull-to-refresh-indicator {
+            position: absolute;
+            top: -50px;
+            left: 0;
+            right: 0;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9;
+        }
+        #pull-to-refresh-indicator .spinner {
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            opacity: 0;
+            transform: scale(0) rotate(0deg);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        #pull-to-refresh-indicator.visible .spinner {
+            opacity: 1;
+            transform: scale(1) rotate(180deg);
+        }
+        #pull-to-refresh-indicator.refreshing .spinner {
+            opacity: 1;
+            transform: scale(1);
+            animation: spin 1s linear infinite;
+        }
+        .ptr-transition {
+            transition: transform 0.3s ease-out;
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        /* ===== END ADDITION ===== */
+        
         @media (max-width: 1023px) {
             header {
                 top: auto;
@@ -652,6 +694,8 @@
         </div>
 
         <div id="main-app-view" class="view">
+             <!-- ===== ADDITION: Pull to Refresh Element ===== -->
+            <div id="pull-to-refresh-indicator"><div class="spinner"></div></div>
             <div class="container">
                 <main>
                     <div class="feed-nav">
@@ -698,6 +742,11 @@
 
         <div id="profile-page-view" class="view">
             <div class="container"><a class="back-btn" data-nav="feed">&larr; Back to Feed</a><div id="profile-content"></div><div id="profile-feed"></div></div>
+        </div>
+        
+        <!-- ===== ADDITION: New view for Post Detail Page ===== -->
+        <div id="post-detail-view" class="view">
+            <div class="container"></div>
         </div>
 
         <div id="settings-view" class="view">
@@ -956,7 +1005,11 @@
                 groupEdit: { membersToAdd: new Set(), membersToRemove: new Set() },
                 userProfileCache: {},
                 search: { query: '', results: null, isLoading: false },
-                currentFeedType: 'foryou' // 'foryou' or 'following'
+                currentFeedType: 'foryou', // 'foryou' or 'following'
+                // ===== ADDITION: State for new features =====
+                previousView: null,
+                currentPostDetail: null,
+                ptr: { startY: 0, diffY: 0, isDragging: false, isRefreshing: false }
             };
             
             const views = { 
@@ -966,7 +1019,9 @@
                 hashtagFeed: document.getElementById('hashtag-feed-view'), messages: document.getElementById('messages-view'),
                 settings: document.getElementById('settings-view'),
                 search: document.getElementById('search-view'),
-                createPost: document.getElementById('create-post-view')
+                createPost: document.getElementById('create-post-view'),
+                // ===== ADDITION: Add post detail view =====
+                postDetail: document.getElementById('post-detail-view')
             };
 
             const modals = { 
@@ -1027,6 +1082,33 @@
                     if (state.currentView === 'messages') this.renderMessagesPage();
                     if (state.currentView === 'settings') this.renderSettingsPage();
                     if (state.currentView === 'search') this.renderSearchView();
+                    // ===== ADDITION: Render post detail view =====
+                    if (state.currentView === 'postDetail') this.renderPostDetailPage();
+                },
+                // ===== ADDITION: New function to render post detail page =====
+                renderPostDetailPage() {
+                    const container = views.postDetail.querySelector('.container');
+                    container.innerHTML = ''; // Clear previous content
+
+                    if (!state.currentPostDetail) {
+                        container.innerHTML = `<p class="error-message" style="text-align:center;">Could not load post.</p>`;
+                        return;
+                    }
+                    
+                    const backButton = document.createElement('a');
+                    backButton.className = 'back-btn';
+                    backButton.innerHTML = '&larr; Back';
+                    backButton.dataset.navBack = true; // Use a specific data attribute for this action
+                    
+                    const postContentDiv = document.createElement('div');
+                    postContentDiv.id = 'post-detail-content';
+
+                    container.appendChild(backButton);
+                    container.appendChild(postContentDiv);
+
+                    // Re-use the existing createPostElement function to render the post
+                    const postElement = this.createPostElement(state.currentPostDetail);
+                    postContentDiv.appendChild(postElement);
                 },
                 renderBanPage(banDetails) { if (state.banCountdownIntervalId) clearInterval(state.banCountdownIntervalId); const reasonEl = document.getElementById('ban-reason'); const timerContainer = document.getElementById('ban-timer-container'); const countdownEl = document.getElementById('ban-countdown'); reasonEl.textContent = banDetails.reason || 'No reason provided.'; if (banDetails.endDate === 'permanent') { timerContainer.classList.add('hidden'); return; } timerContainer.classList.remove('hidden'); const endDate = new Date(banDetails.endDate); const updateCountdown = () => { const now = new Date(); const diff = endDate - now; if (diff <= 0) { countdownEl.textContent = 'Your ban has expired. You can now log out and log back in.'; clearInterval(state.banCountdownIntervalId); state.banCountdownIntervalId = null; return; } const days = Math.floor(diff / (1000 * 60 * 60 * 24)); const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)); const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)); let countdownText = ''; if (days > 0) countdownText += `${days}d `; if (hours > 0 || days > 0) countdownText += `${hours}h `; countdownText += `${minutes}m`; countdownEl.textContent = countdownText.trim(); }; updateCountdown(); state.banCountdownIntervalId = setInterval(updateCountdown, 1000); },
                 renderFeed(posts, container, isMainFeed = false) {
@@ -1220,7 +1302,17 @@
                         ` : ''}
                     `;
                     
-                    postDiv.querySelector('.post-content').innerHTML = this.formatPostContent(post.postContent);
+                    const postContentEl = postDiv.querySelector('.post-content');
+                    postContentEl.innerHTML = this.formatPostContent(post.postContent);
+                    // ===== ADDITION: Add click listener for post detail view =====
+                    postContentEl.addEventListener('click', (e) => {
+                        // Don't navigate if a link inside the content was clicked
+                        if (e.target.tagName === 'A') {
+                            return;
+                        }
+                        handlers.showPostDetail(post.postId);
+                    });
+                    
                     return postDiv;
                 },
                 createCommentElement(comment) {
@@ -1541,6 +1633,17 @@
                         }
                     }
                 },
+                // ===== ADDITION: New handler for post detail navigation =====
+                async showPostDetail(postId) {
+                    state.previousView = state.currentView;
+                    const post = state.posts.find(p => p.postId === postId);
+                    if (!post) {
+                        alert("Could not find post details.");
+                        return;
+                    }
+                    state.currentPostDetail = post;
+                    core.navigateTo('postDetail');
+                },
                 async blockUser(userIdToBlock) { if (userIdToBlock === state.currentUser.userId) return; const userToBlock = state.posts.find(p => p.userId === userIdToBlock) || state.profileUser || state.blockedUsersList.find(u => u.userId === userIdToBlock); const userName = userToBlock ? userToBlock.displayName : 'this user'; if (confirm(`Are you sure you want to block ${userName}? You will no longer see their posts, comments, or profile, and they will not see yours.`)) { try { await api.call('blockUser', { blockerId: state.currentUser.userId, blockedId: userIdToBlock }); alert(`${userName} has been blocked.`); await core.refreshFeed(true); if (state.currentView === 'profile' && state.profileUser && state.profileUser.userId === userIdToBlock) { core.navigateTo('feed'); } } catch (e) { alert(`Error: Could not block user. ${e.message}`); } } },
                 async unblockUser(userIdToUnblock, event) { const unblockBtn = event.target.closest('.unblock-btn'); const userToUnblock = state.blockedUsersList.find(u => u.userId === userIdToUnblock); if (!userToUnblock || !unblockBtn) return; unblockBtn.disabled = true; unblockBtn.textContent = 'Unblocking...'; try { await api.call('blockUser', { blockerId: state.currentUser.userId, blockedId: userIdToUnblock }); state.blockedUsersList = state.blockedUsersList.filter(u => u.userId !== userIdToUnblock); ui.renderSettingsPage(); } catch(e) { alert(`Error unblocking user: ${e.message}`); unblockBtn.disabled = false; unblockBtn.textContent = 'Unblock'; } },
                 openReportModal(userId, postId = null) { state.reporting = { userId, postId }; const user = state.posts.find(p => p.userId === userId) || state.profileUser; const title = document.getElementById('report-modal-title'); title.textContent = postId ? `Report post by ${user.displayName}` : `Report ${user.displayName}`; ui.toggleModal('report', true); },
@@ -1774,6 +1877,25 @@
                     } finally {
                         ui.setButtonState('save-group-changes-btn', 'Save Changes', false);
                     }
+                },
+                // ===== ADDITION: New handler to reset pull-to-refresh UI =====
+                resetPullToRefresh() {
+                    const indicator = document.getElementById('pull-to-refresh-indicator');
+                    const feedView = views.feed;
+                    
+                    feedView.classList.add('ptr-transition');
+                    indicator.classList.add('ptr-transition');
+                    
+                    feedView.style.transform = 'translateY(0px)';
+                    indicator.style.transform = 'translateY(0px)';
+                    
+                    indicator.classList.remove('refreshing', 'visible');
+
+                    setTimeout(() => {
+                        feedView.classList.remove('ptr-transition');
+                        indicator.classList.remove('ptr-transition');
+                        state.ptr.isRefreshing = false;
+                    }, 300);
                 }
             };
 
@@ -1850,7 +1972,7 @@
                                 ? document.getElementById('following-feed')
                                 : document.getElementById('foryou-feed');
                             inactiveFeedEl.innerHTML = '';
-                        } else if (['profile', 'hashtagFeed', 'messages', 'settings', 'search', 'createPost'].includes(state.currentView)) {
+                        } else if (['profile', 'hashtagFeed', 'messages', 'settings', 'search', 'createPost', 'postDetail'].includes(state.currentView)) {
                              ui.render(); 
                         }
                     }
@@ -1964,6 +2086,14 @@
                     
                     document.body.addEventListener('click', (e) => {
                         const target = e.target;
+                        // ===== ADDITION: Listener for Post Detail back button =====
+                        const backBtn = target.closest('[data-nav-back]');
+                        if (backBtn) {
+                            e.preventDefault();
+                            core.navigateTo(state.previousView || 'feed');
+                            return;
+                        }
+
                         if (target.closest('#new-chat-btn')) { handlers.openNewChatModal(); return; }
                         if (target.closest('#group-settings-btn')) { handlers.openGroupSettings(); return; }
                         if (!modals.profileShortcut.classList.contains('hidden') && !target.closest('#profile-shortcut-modal .modal-content') && !target.closest('#profile-nav-btn')) { ui.toggleModal('profileShortcut', false); }
@@ -2015,6 +2145,65 @@
                     });
                     document.body.addEventListener('submit', (e) => { const commentForm = e.target.closest('.comment-form'); if(commentForm) { e.preventDefault(); const input = commentForm.querySelector('input'); handlers.addComment(e.target.closest('.post').dataset.postId, input.value); input.value = ''; } const messageForm = e.target.closest('#message-input-form'); if(messageForm) { e.preventDefault(); handlers.sendMessage(); } });
                     document.getElementById('auth-view').addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; const activeForm = !document.getElementById('login-form').classList.contains('hidden') ? document.getElementById('login-form') : document.getElementById('register-form'); e.preventDefault(); const inputs = [...activeForm.querySelectorAll('input')]; const currentInputIndex = inputs.findIndex(input => input === document.activeElement); if (currentInputIndex > -1 && currentInputIndex < inputs.length - 1) { inputs[currentInputIndex + 1].focus(); } else { activeForm.querySelector('button.primary').click(); } });
+                    
+                    // ===== ADDITION: Event listeners for Pull to Refresh =====
+                    const feedView = views.feed;
+                    const indicator = document.getElementById('pull-to-refresh-indicator');
+                    const refreshThreshold = 70; // How far user needs to pull
+                    const pullResistance = 0.5; // Makes the pull feel heavier
+
+                    feedView.addEventListener('touchstart', (e) => {
+                        if (window.scrollY === 0 && state.currentView === 'feed') {
+                            state.ptr.startY = e.touches[0].pageY;
+                            state.ptr.isDragging = true;
+                        }
+                    }, { passive: true });
+
+                    feedView.addEventListener('touchmove', (e) => {
+                        if (!state.ptr.isDragging || state.ptr.isRefreshing) return;
+
+                        const currentY = e.touches[0].pageY;
+                        state.ptr.diffY = currentY - state.ptr.startY;
+
+                        if (state.ptr.diffY < 0) return; // Only for pulling down
+
+                        // This prevents the browser's native overscroll/refresh behavior
+                        if (e.cancelable) e.preventDefault();
+
+                        const pullDistance = Math.min(state.ptr.diffY * pullResistance, 100);
+                        feedView.style.transform = `translateY(${pullDistance}px)`;
+                        indicator.style.transform = `translateY(${pullDistance}px)`;
+
+                        if (pullDistance > refreshThreshold) {
+                           indicator.classList.add('visible');
+                        } else {
+                           indicator.classList.remove('visible');
+                        }
+                    }, { passive: false });
+
+                    feedView.addEventListener('touchend', () => {
+                        if (!state.ptr.isDragging || state.ptr.isRefreshing) return;
+                        
+                        state.ptr.isDragging = false;
+                        
+                        if (state.ptr.diffY * pullResistance > refreshThreshold) {
+                            state.ptr.isRefreshing = true;
+                            indicator.classList.add('refreshing');
+                            feedView.classList.add('ptr-transition');
+                            indicator.classList.add('ptr-transition');
+                            feedView.style.transform = `translateY(50px)`;
+                            indicator.style.transform = `translateY(50px)`;
+                            
+                            core.refreshFeed(false).finally(() => {
+                                handlers.resetPullToRefresh();
+                            });
+                        } else {
+                            handlers.resetPullToRefresh();
+                        }
+
+                        state.ptr.diffY = 0;
+                        state.ptr.startY = 0;
+                    }, { passive: true });
                 },
                 async initializeApp() { const savedUser = JSON.parse(localStorage.getItem('currentUser')); if (!savedUser) { return core.navigateTo('auth'); } state.currentUser = savedUser; core.navigateTo('feed'); ui.showFeedSkeleton(document.getElementById('foryou-feed')); try { await core.refreshFeed(false); core.startStoryCountdownInterval(); } catch (error) { alert(`Session error: ${error.message}. Please log in again.`); core.logout(); } },
                 main() { core.setupEventListeners(); const savedTheme = localStorage.getItem('theme') || 'dark'; document.documentElement.setAttribute('data-theme', savedTheme); document.getElementById('theme-switch').checked = savedTheme === 'dark'; if (localStorage.getItem('currentUser')) { core.initializeApp(); } else { core.navigateTo('auth'); } }
