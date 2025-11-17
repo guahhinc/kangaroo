@@ -85,16 +85,28 @@
         #notification-dot, #message-dot { position: absolute; top: -2px; right: -4px; width: 10px; height: 10px; background-color: var(--error-color); border-radius: 50%; border: 2px solid var(--primary-bg-color); display: none; }
         #global-banner { position: fixed; top: env(safe-area-inset-top); left: 0; right: 0; background-color: var(--primary-text-color); color: var(--primary-bg-color); text-align: center; padding: 8px 16px; font-size: 14px; font-weight: 600; z-index: 11; line-height: 1.4; transition: transform 0.3s ease-in-out, left 0.3s ease-in-out; }
         #global-banner.hidden { transform: translateY(-100%); }
+        
+        /* Feed Tabs */
+        .feed-nav { display: flex; border-bottom: 1px solid var(--border-color); position: sticky; top: calc(50px + env(safe-area-inset-top) + var(--banner-height)); background-color: var(--primary-bg-color); z-index: 9; }
+        .feed-nav-tab { flex: 1; text-align: center; padding: 14px 0; font-weight: 600; cursor: pointer; color: var(--secondary-text-color); border-bottom: 2px solid transparent; }
+        .feed-nav-tab.active { color: var(--primary-text-color); border-bottom-color: var(--accent-color); }
+        .feed-nav-actions { display: flex; align-items: center; padding: 0 16px; }
+        .feed-nav-actions #open-create-post-btn { background: none; padding: 8px; color: var(--primary-text-color); }
+        .feed-nav-actions #open-create-post-btn .material-symbols-rounded { font-size: 28px; vertical-align: -6px; }
+
+        /* Create Post View */
+        #create-post-view .container { padding-top: 20px; }
         #create-post-form { padding: 16px; margin: 0 0 20px 0; border: 1px solid var(--border-color); border-radius: 12px; background-color: var(--secondary-bg-color); }
         .create-post-options { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
         #post-type-select { padding: 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--primary-bg-color); color: var(--primary-text-color); font-size: 14px; }
-        #create-post-form textarea { width: 100%; min-height: 60px; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; background-color: var(--primary-bg-color); color: var(--primary-text-color); font-size: 16px; resize: vertical; margin-bottom: 0; }
+        #create-post-form textarea { width: 100%; min-height: 120px; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; background-color: var(--primary-bg-color); color: var(--primary-text-color); font-size: 16px; resize: vertical; margin-bottom: 0; }
         .create-post-left-actions { display: flex; align-items: center; gap: 8px; }
         .create-post-actions button { padding: 8px 16px; }
         #add-image-btn { background: none; padding: 5px; color: var(--secondary-text-color); font-size: 26px; }
         #post-image-preview-container { position: relative; margin-top: 10px; }
         #post-image-preview { max-width: 100%; max-height: 200px; border-radius: 12px; }
         #remove-image-btn { position: absolute; top: 8px; right: 8px; background-color: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 18px; line-height: 24px; text-align: center; cursor: pointer; padding: 0; font-weight: bold; }
+
         .post { border: 1px solid var(--border-color); border-radius: 12px; margin: 20px 0; background-color: var(--secondary-bg-color); box-shadow: none; overflow: hidden; }
         .post-header { display: flex; align-items: center; padding: 12px 16px; gap: 12px; cursor: pointer; position: relative; }
         .post-header-info { flex-grow: 1; }
@@ -481,6 +493,10 @@
                 padding-bottom: calc(65px + env(safe-area-inset-bottom));
             }
             
+            .feed-nav {
+                top: calc(env(safe-area-inset-top) + var(--banner-height));
+            }
+
             #messages-view {
                 height: auto;
             }
@@ -539,6 +555,10 @@
                 padding-left: var(--sidebar-width);
             }
             #global-banner {
+                left: var(--sidebar-width);
+            }
+             .feed-nav {
+                top: calc(env(safe-area-inset-top) + var(--banner-height));
                 left: var(--sidebar-width);
             }
         }
@@ -636,30 +656,45 @@
         </div>
 
         <div id="main-app-view" class="view">
-            <div class="container">
-                <main>
-                    <section id="create-post-form">
-                        <textarea id="post-content-input" placeholder="What's on your mind?"></textarea>
-                        <div id="post-image-preview-container" class="hidden"></div>
-                        <div class="create-post-options">
-                            <div class="create-post-left-actions">
-                                <select id="post-type-select">
-                                    <option value="regular">Post</option>
-                                    <option value="story-24">Story (24h)</option>
-                                    <option value="story-12">Story (12h)</option>
-                                </select>
-                                <button id="add-image-btn" title="Add Image URL"><span class="material-symbols-rounded">add_photo_alternate</span></button>
-                            </div>
-                            <div class="create-post-actions">
-                                <button id="submit-post-btn" class="primary">Post</button>
-                            </div>
-                        </div>
-                    </section>
+            <main>
+                <div class="feed-nav">
+                    <div class="feed-nav-tabs" style="display: flex; flex: 1;">
+                        <div class="feed-nav-tab active" data-feed-type="foryou">For You</div>
+                        <div class="feed-nav-tab" data-feed-type="following">Following</div>
+                    </div>
+                    <div class="feed-nav-actions">
+                         <button id="open-create-post-btn" title="Create Post"><span class="material-symbols-rounded">add</span></button>
+                    </div>
+                </div>
+                <div class="container">
                     <section id="feed"></section>
-                </main>
-            </div>
+                </div>
+            </main>
         </div>
         
+        <div id="create-post-view" class="view">
+            <div class="container">
+                 <a class="back-btn" data-nav="feed">&larr; Back to Feed</a>
+                 <section id="create-post-form">
+                    <textarea id="post-content-input" placeholder="What's on your mind?"></textarea>
+                    <div id="post-image-preview-container" class="hidden"></div>
+                    <div class="create-post-options">
+                        <div class="create-post-left-actions">
+                            <select id="post-type-select">
+                                <option value="regular">Post</option>
+                                <option value="story-24">Story (24h)</option>
+                                <option value="story-12">Story (12h)</option>
+                            </select>
+                            <button id="add-image-btn" title="Add Image URL"><span class="material-symbols-rounded">add_photo_alternate</span></button>
+                        </div>
+                        <div class="create-post-actions">
+                            <button id="submit-post-btn" class="primary">Post</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
         <div id="profile-page-view" class="view">
             <div class="container"><a class="back-btn" data-nav="feed">&larr; Back to Feed</a><div id="profile-content"></div><div id="profile-feed"></div></div>
         </div>
@@ -919,7 +954,8 @@
                 newChat: { selectedUsers: new Map() },
                 groupEdit: { membersToAdd: new Set(), membersToRemove: new Set() },
                 userProfileCache: {},
-                search: { query: '', results: null, isLoading: false }
+                search: { query: '', results: null, isLoading: false },
+                currentFeedType: 'foryou' // 'foryou' or 'following'
             };
             
             const views = { 
@@ -928,7 +964,8 @@
                 suspended: document.getElementById('suspended-view'), outage: document.getElementById('outage-view'), 
                 hashtagFeed: document.getElementById('hashtag-feed-view'), messages: document.getElementById('messages-view'),
                 settings: document.getElementById('settings-view'),
-                search: document.getElementById('search-view')
+                search: document.getElementById('search-view'),
+                createPost: document.getElementById('create-post-view')
             };
 
             const modals = { 
@@ -970,7 +1007,7 @@
             const ui = {
                 render() {
                     const header = document.querySelector('header');
-                    const isUserLoggedIn = ['feed', 'profile', 'editProfile', 'hashtagFeed', 'messages', 'settings', 'search'].includes(state.currentView);
+                    const isUserLoggedIn = !['auth', 'suspended', 'outage'].includes(state.currentView);
                     header.classList.toggle('hidden', !isUserLoggedIn);
                     document.body.classList.toggle('logged-in', isUserLoggedIn);
                     Object.values(views).forEach(v => v.classList.remove('active'));
@@ -985,27 +1022,46 @@
                 renderBanPage(banDetails) { if (state.banCountdownIntervalId) clearInterval(state.banCountdownIntervalId); const reasonEl = document.getElementById('ban-reason'); const timerContainer = document.getElementById('ban-timer-container'); const countdownEl = document.getElementById('ban-countdown'); reasonEl.textContent = banDetails.reason || 'No reason provided.'; if (banDetails.endDate === 'permanent') { timerContainer.classList.add('hidden'); return; } timerContainer.classList.remove('hidden'); const endDate = new Date(banDetails.endDate); const updateCountdown = () => { const now = new Date(); const diff = endDate - now; if (diff <= 0) { countdownEl.textContent = 'Your ban has expired. You can now log out and log back in.'; clearInterval(state.banCountdownIntervalId); state.banCountdownIntervalId = null; return; } const days = Math.floor(diff / (1000 * 60 * 60 * 24)); const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)); const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)); let countdownText = ''; if (days > 0) countdownText += `${days}d `; if (hours > 0 || days > 0) countdownText += `${hours}h `; countdownText += `${minutes}m`; countdownEl.textContent = countdownText.trim(); }; updateCountdown(); state.banCountdownIntervalId = setInterval(updateCountdown, 1000); },
                 renderFeed(posts, container, isMainFeed = false) {
                     const validPosts = posts.filter(p => !p.isStory || new Date() < new Date(p.expiryTimestamp));
-                    if (!validPosts || validPosts.length === 0) {
-                        container.innerHTML = '<p style="text-align: center; color: var(--secondary-text-color);">No posts to see here.</p>';
+                    
+                    let postsToRender = [...validPosts];
+
+                    if (isMainFeed) {
+                        document.querySelectorAll('.feed-nav-tab').forEach(tab => {
+                             tab.classList.toggle('active', tab.dataset.feedType === state.currentFeedType);
+                        });
+
+                        if (state.currentFeedType === 'following') {
+                             postsToRender = postsToRender.filter(post => {
+                                 const isFollowed = state.currentUserFollowingList.includes(post.userId);
+                                 const isOwnPost = post.userId === state.currentUser.userId;
+                                 return isFollowed || isOwnPost;
+                             }).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                        } else { // For You feed logic
+                            const now = new Date();
+                            const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                            const stories = []; const priorityPostsWithImage = []; const priorityPostsWithoutImage = []; const otherPosts = [];
+                            postsToRender.forEach(post => {
+                                const isFollowed = state.currentUserFollowingList.includes(post.userId);
+                                const isOwnPost = post.userId === state.currentUser.userId;
+                                const hasImage = post.postContent.includes('<img');
+                                if (post.isStory && (isFollowed || isOwnPost)) { stories.push(post); } 
+                                else { const postDate = new Date(post.timestamp); if ((isFollowed || isOwnPost) && postDate > twentyFourHoursAgo) { if (hasImage) { priorityPostsWithImage.push(post); } else { priorityPostsWithoutImage.push(post); } } else { otherPosts.push(post); } }
+                            });
+                            stories.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                            priorityPostsWithImage.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                            priorityPostsWithoutImage.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                            postsToRender = [...stories, ...priorityPostsWithImage, ...priorityPostsWithoutImage, ...otherPosts];
+                        }
+                    }
+
+                    if (!postsToRender || postsToRender.length === 0) {
+                        const message = isMainFeed && state.currentFeedType === 'following'
+                            ? 'Posts from people you follow will appear here.'
+                            : 'No posts to see here.';
+                        container.innerHTML = `<p style="text-align: center; color: var(--secondary-text-color); margin-top: 40px;">${message}</p>`;
                         return;
                     }
-                    let postsToRender = [...validPosts];
-                    if (isMainFeed) {
-                        const now = new Date();
-                        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-                        const stories = []; const priorityPostsWithImage = []; const priorityPostsWithoutImage = []; const otherPosts = [];
-                        postsToRender.forEach(post => {
-                            const isFollowed = state.currentUserFollowingList.includes(post.userId);
-                            const isOwnPost = post.userId === state.currentUser.userId;
-                            const hasImage = post.postContent.includes('<img');
-                            if (post.isStory && (isFollowed || isOwnPost)) { stories.push(post); } 
-                            else { const postDate = new Date(post.timestamp); if ((isFollowed || isOwnPost) && postDate > twentyFourHoursAgo) { if (hasImage) { priorityPostsWithImage.push(post); } else { priorityPostsWithoutImage.push(post); } } else { otherPosts.push(post); } }
-                        });
-                        stories.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-                        priorityPostsWithImage.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-                        priorityPostsWithoutImage.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-                        postsToRender = [...stories, ...priorityPostsWithImage, ...priorityPostsWithoutImage, ...otherPosts];
-                    }
+
                     container.innerHTML = '';
                     postsToRender.forEach(post => container.appendChild(this.createPostElement(post)));
                 },
@@ -1424,8 +1480,8 @@
                         ui.setButtonState('register-btn', 'Sign Up', false);
                     }
                 },
-                async createPost() { const contentInput = document.getElementById('post-content-input'); let postContent = sanitizeHTML(contentInput.value.trim()); const imageUrl = state.postImageUrl; if (!postContent && !imageUrl && !state.editingPostId) return; if (imageUrl) { postContent += `<br><img src="${sanitizeHTML(imageUrl)}" alt="user image">`; } const isUpdating = !!state.editingPostId; const button = document.getElementById('submit-post-btn'); const originalButtonText = isUpdating ? 'Save Changes' : 'Post'; ui.setButtonState(button.id, 'Saving...', true); try { if (isUpdating) { await api.call('updatePost', { userId: state.currentUser.userId, postId: state.editingPostId, postContent: postContent }); } else { const postType = document.getElementById('post-type-select').value; const isStory = postType.startsWith('story'); const storyDuration = isStory ? parseInt(postType.split('-')[1]) : 0; await api.call('createPost', { userId: state.currentUser.userId, postContent, isStory, storyDuration }); } contentInput.value = ''; state.postImageUrl = null; state.editingPostId = null; ui.renderImagePreview(); button.textContent = 'Post'; document.getElementById('post-type-select').value = 'regular'; await core.refreshFeed(false); } catch (e) { alert(`Error: ${e.message}`); } finally { ui.setButtonState(button.id, originalButtonText, false); if (isUpdating) { button.textContent = 'Post'; state.editingPostId = null; } } },
-                enterEditMode(postId) { const post = state.posts.find(p => p.postId === postId); if (!post) return; const textContent = post.postContent.replace(/<br><img src=".*?" alt=".*?">/g, '').trim(); document.getElementById('post-content-input').value = textContent; document.getElementById('submit-post-btn').textContent = 'Save Changes'; state.editingPostId = postId; window.scrollTo({ top: 0, behavior: 'smooth' }); document.getElementById('post-content-input').focus(); },
+                async createPost() { const contentInput = document.getElementById('post-content-input'); let postContent = sanitizeHTML(contentInput.value.trim()); const imageUrl = state.postImageUrl; if (!postContent && !imageUrl && !state.editingPostId) return; if (imageUrl) { postContent += `<br><img src="${sanitizeHTML(imageUrl)}" alt="user image">`; } const isUpdating = !!state.editingPostId; const button = document.getElementById('submit-post-btn'); const originalButtonText = isUpdating ? 'Save Changes' : 'Post'; ui.setButtonState(button.id, 'Saving...', true); try { if (isUpdating) { await api.call('updatePost', { userId: state.currentUser.userId, postId: state.editingPostId, postContent: postContent }); } else { const postType = document.getElementById('post-type-select').value; const isStory = postType.startsWith('story'); const storyDuration = isStory ? parseInt(postType.split('-')[1]) : 0; await api.call('createPost', { userId: state.currentUser.userId, postContent, isStory, storyDuration }); } contentInput.value = ''; state.postImageUrl = null; state.editingPostId = null; ui.renderImagePreview(); button.textContent = 'Post'; document.getElementById('post-type-select').value = 'regular'; core.navigateTo('feed'); await core.refreshFeed(false); } catch (e) { alert(`Error: ${e.message}`); } finally { ui.setButtonState(button.id, originalButtonText, false); if (isUpdating) { button.textContent = 'Post'; state.editingPostId = null; } } },
+                enterEditMode(postId) { const post = state.posts.find(p => p.postId === postId); if (!post) return; core.navigateTo('createPost'); setTimeout(() => { const textContent = post.postContent.replace(/<br><img src=".*?" alt=".*?">/g, '').trim(); document.getElementById('post-content-input').value = textContent; document.getElementById('submit-post-btn').textContent = 'Save Changes'; state.editingPostId = postId; document.getElementById('post-content-input').focus(); }, 100); },
                 async addComment(postId, commentText) { if (!commentText.trim()) return; const tempComment = { commentId: `temp_${Date.now()}`, userId: state.currentUser.userId, displayName: state.currentUser.displayName, isVerified: state.currentUser.isVerified, commentText: commentText }; const postIndex = state.posts.findIndex(p => p.postId === postId); if (postIndex > -1) { state.posts[postIndex].comments.push(tempComment); ui.render(); } try { await api.call('addComment', { postId, userId: state.currentUser.userId, commentText }); await core.refreshFeed(false); } catch (e) { alert(`Error: ${e.message}`); const pIndex = state.posts.findIndex(p => p.postId === postId); if(pIndex > -1) { state.posts[pIndex].comments = state.posts[pIndex].comments.filter(c => c.commentId !== tempComment.commentId); ui.render(); }}},
                 async toggleLike(postId) { const post = state.posts.find(p => p.postId === postId); if (!post) return; const likeIndex = post.likes.findIndex(l => l.userId === state.currentUser.userId); if (likeIndex > -1) post.likes.splice(likeIndex, 1); else post.likes.push({ userId: state.currentUser.userId }); ui.render(); try { await api.call('toggleLike', { postId, userId: state.currentUser.userId }); } catch (e) { if (likeIndex > -1) post.likes.push({ userId: state.currentUser.userId }); else post.likes.pop(); ui.render(); alert(`Error: ${e.message}`); }},
                 async updateProfile() { ui.hideError('edit-profile-error'); const [displayName, pfpUrl, description] = [document.getElementById('edit-display-name').value, document.getElementById('edit-pfp-url').value, document.getElementById('edit-description').value]; ui.setButtonState('save-profile-btn', 'Saving...', true); try { await api.call('updateProfile', { userId: state.currentUser.userId, displayName, profilePictureUrl: pfpUrl, description }); state.currentUser = { ...state.currentUser, displayName, profilePictureUrl: pfpUrl, description }; localStorage.setItem('currentUser', JSON.stringify(state.currentUser)); await core.refreshFeed(false); await handlers.showProfile(state.currentUser.userId); } catch (e) { ui.showError('edit-profile-error', e.message); } finally { ui.setButtonState('save-profile-btn', 'Save Changes', false); }},
@@ -1776,7 +1832,7 @@
                         if(state.currentView === 'feed') { document.getElementById('feed').innerHTML = `<p class="error-message">Could not load feed: ${e.message}</p>`; }
                         if (e.message.includes("validate user session")) { setTimeout(() => core.logout(), 2000); }
                     } finally { 
-                        if (['feed', 'profile', 'hashtagFeed', 'messages', 'settings', 'search'].includes(state.currentView)) ui.render(); 
+                        if (['feed', 'profile', 'hashtagFeed', 'messages', 'settings', 'search', 'createPost'].includes(state.currentView)) ui.render(); 
                     }
                 },
                 updateNotificationDot() { document.getElementById('notification-dot').style.display = state.unreadNotificationCount > 0 ? 'block' : 'none'; },
@@ -1847,6 +1903,17 @@
                     document.getElementById('notifications-list').addEventListener('click', (e) => { const item = e.target.closest('.notification-item'); if(!item) return; if(e.target.closest('.delete-notification-btn')) { handlers.deleteNotification(item.dataset.notificationId); return; } const clickableArea = e.target.closest('.notification-item-clickable'); if (clickableArea) { ui.toggleModal('notifications', false); const notification = state.notifications.find(n => n.notificationId === item.dataset.notificationId); if (!notification) return; if (notification.postAuthorId && notification.postId && notification.postId !== 'null') { handlers.showProfile(notification.postAuthorId, notification.postId); } else if (notification.actorUserId) { handlers.showProfile(notification.actorUserId); } } });
                     document.getElementById('edit-profile-view').addEventListener('click', e => { const choice = e.target.closest('#pfp-choices-gallery img'); if (choice) { document.getElementById('edit-pfp-url').value = choice.dataset.url; document.querySelectorAll('#pfp-choices-gallery img').forEach(img => img.classList.remove('selected')); choice.classList.add('selected'); } });
                     
+                    document.querySelectorAll('.feed-nav-tab').forEach(tab => {
+                        tab.addEventListener('click', () => {
+                            const feedType = tab.dataset.feedType;
+                            if (state.currentFeedType !== feedType) {
+                                state.currentFeedType = feedType;
+                                ui.renderFeed(state.posts, document.getElementById('feed'), true);
+                            }
+                        });
+                    });
+                    document.getElementById('open-create-post-btn').addEventListener('click', () => core.navigateTo('createPost'));
+
                     document.getElementById('new-chat-user-search').addEventListener('input', (e) => { clearTimeout(newChatSearchTimeout); newChatSearchTimeout = setTimeout(() => handlers.searchUsersForNewChat(e.target.value), 300); });
                     document.getElementById('new-chat-selected-users').addEventListener('click', (e) => { const removeBtn = e.target.closest('button'); if(removeBtn) { state.newChat.selectedUsers.delete(removeBtn.dataset.userId); ui.renderNewChatModal(); } });
                     document.getElementById('create-chat-btn').addEventListener('click', handlers.createChatOrGroup);
