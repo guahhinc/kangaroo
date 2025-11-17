@@ -87,16 +87,16 @@
         #global-banner.hidden { transform: translateY(-100%); }
         
         /* Feed Tabs & Swipe Animation */
-        .feed-nav { display: flex; border-bottom: 1px solid var(--border-color); position: sticky; top: calc(50px + env(safe-area-inset-top) + var(--banner-height)); background-color: var(--primary-bg-color); z-index: 9; }
+        .feed-nav { display: flex; border-bottom: 1px solid var(--border-color); margin: 20px 0; }
         .feed-nav-tabs { display: flex; flex-grow: 1; }
         .feed-nav-tab { flex: 1; text-align: center; padding: 14px 0; font-weight: 600; cursor: pointer; color: var(--secondary-text-color); border-bottom: 2px solid transparent; }
         .feed-nav-tab.active { color: var(--primary-text-color); border-bottom-color: var(--accent-color); }
         .feed-nav-actions { display: flex; align-items: center; padding: 0 16px; }
         #open-create-post-btn { background: none; padding: 8px; color: var(--primary-text-color); cursor: pointer; }
         #open-create-post-btn .material-symbols-rounded { font-size: 28px; vertical-align: -6px; }
-        #feed-container-wrapper { overflow-x: hidden; }
+        #feed-container-wrapper { overflow-x: hidden; margin: 0 -16px; /* Counteract container padding for full-width swipe */ }
         #feed-container { display: flex; width: 200%; transition: transform 0.3s ease-in-out; }
-        .feed-page { width: 50%; padding: 0 16px; }
+        .feed-page { width: 50%; padding: 0 16px; /* Restore padding here */ }
 
         /* Create Post View */
         #create-post-view .container { padding-top: 20px; }
@@ -496,10 +496,6 @@
                 padding-top: calc(20px + var(--banner-height) + env(safe-area-inset-top));
                 padding-bottom: calc(65px + env(safe-area-inset-bottom));
             }
-            
-            .feed-nav {
-                top: calc(env(safe-area-inset-top) + var(--banner-height));
-            }
 
             #messages-view {
                 height: auto;
@@ -559,10 +555,6 @@
                 padding-left: var(--sidebar-width);
             }
             #global-banner {
-                left: var(--sidebar-width);
-            }
-             .feed-nav {
-                top: calc(env(safe-area-inset-top) + var(--banner-height));
                 left: var(--sidebar-width);
             }
         }
@@ -660,23 +652,25 @@
         </div>
 
         <div id="main-app-view" class="view">
-            <main>
-                <div class="feed-nav">
-                    <div class="feed-nav-tabs">
-                        <div class="feed-nav-tab active" data-feed-type="foryou">For You</div>
-                        <div class="feed-nav-tab" data-feed-type="following">Following</div>
+            <div class="container">
+                <main>
+                    <div class="feed-nav">
+                        <div class="feed-nav-tabs">
+                            <div class="feed-nav-tab active" data-feed-type="foryou">For You</div>
+                            <div class="feed-nav-tab" data-feed-type="following">Following</div>
+                        </div>
+                        <div class="feed-nav-actions">
+                             <button id="open-create-post-btn" title="Create Post"><span class="material-symbols-rounded">add</span></button>
+                        </div>
                     </div>
-                    <div class="feed-nav-actions">
-                         <button id="open-create-post-btn" title="Create Post"><span class="material-symbols-rounded">add</span></button>
+                    <div id="feed-container-wrapper">
+                        <div id="feed-container">
+                            <section id="foryou-feed" class="feed-page"></section>
+                            <section id="following-feed" class="feed-page"></section>
+                        </div>
                     </div>
-                </div>
-                <div id="feed-container-wrapper">
-                    <div id="feed-container">
-                        <section id="foryou-feed" class="feed-page"></section>
-                        <section id="following-feed" class="feed-page"></section>
-                    </div>
-                </div>
-            </main>
+                </main>
+            </div>
         </div>
         
         <div id="create-post-view" class="view">
