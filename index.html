@@ -25,13 +25,14 @@
             --sidebar-width: 240px;
         }
         [data-theme="dark"] {
-            --primary-bg-color: #000000; --secondary-bg-color: #121212; --primary-text-color: #F5F5F7;
+            --primary-bg-color: #121212; --secondary-bg-color: #1c1c1c; --primary-text-color: #F5F5F7;
             --secondary-text-color: #8D8D92; --border-color: #2D2D2F; --accent-color: #c39078;
             --warning-color: #FFD54F; --button-hover-bg-color: #b17d65; --button-secondary-bg-color: #2a2a2a;
         }
         * { box-sizing: border-box; font-family: 'Inter Tight', -apple-system, sans-serif; }
         html {
             height: 100%;
+            background-color: var(--primary-bg-color);
         }
         body {
             background-color: var(--primary-bg-color); color: var(--primary-text-color); margin: 0; padding: 0; 
@@ -51,7 +52,7 @@
         body.logged-in { padding-top: calc(50px + env(safe-area-inset-top) + 20px + var(--banner-height)); transition: padding-top 0.3s ease-in-out, padding-bottom 0.3s ease-in-out; }
         .view { display: none; }
         .view.active { display: block; }
-        #main-app-view { background-color: var(--primary-bg-color); } /* Fix for iOS sticky nav background */
+        #main-app-view { background-color: var(--primary-bg-color); }
         .container { max-width: 600px; margin: 0 auto; padding: 0 16px; }
         .hidden { display: none !important; }
         button { font-weight: 600; cursor: pointer; border-radius: 10px; border: none; box-shadow: none; }
@@ -1022,9 +1023,8 @@
                     views[state.currentView]?.classList.add('active');
 
                     if (state.currentView === 'feed') {
-                        // On initial load of the feed view, render the 'For You' feed and reset state.
                         this.renderFeed(state.posts, document.getElementById('foryou-feed'), true);
-                        document.getElementById('following-feed').innerHTML = ''; // Ensure other feed is clear
+                        document.getElementById('following-feed').innerHTML = '';
                         document.getElementById('feed-container').style.transform = 'translateX(0)';
                         document.querySelector('.feed-nav-tab[data-feed-type="foryou"]').classList.add('active');
                         document.querySelector('.feed-nav-tab[data-feed-type="following"]').classList.remove('active');
@@ -1849,7 +1849,6 @@
                         if (e.message.includes("validate user session")) { setTimeout(() => core.logout(), 2000); }
                     } finally { 
                         if (state.currentView === 'feed') {
-                            // After a refresh, update the currently active feed and clear the other one
                             const activeFeedEl = state.currentFeedType === 'foryou' 
                                 ? document.getElementById('foryou-feed') 
                                 : document.getElementById('following-feed');
