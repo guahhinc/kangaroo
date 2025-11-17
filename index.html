@@ -51,6 +51,7 @@
         body.logged-in { padding-top: calc(50px + env(safe-area-inset-top) + 20px + var(--banner-height)); transition: padding-top 0.3s ease-in-out, padding-bottom 0.3s ease-in-out; }
         .view { display: none; }
         .view.active { display: block; }
+        #main-app-view { background-color: var(--primary-bg-color); } /* Fix for iOS sticky nav background */
         .container { max-width: 600px; margin: 0 auto; padding: 0 16px; }
         .hidden { display: none !important; }
         button { font-weight: 600; cursor: pointer; border-radius: 10px; border: none; box-shadow: none; }
@@ -86,25 +87,29 @@
         #global-banner { position: fixed; top: env(safe-area-inset-top); left: 0; right: 0; background-color: var(--primary-text-color); color: var(--primary-bg-color); text-align: center; padding: 8px 16px; font-size: 14px; font-weight: 600; z-index: 11; line-height: 1.4; transition: transform 0.3s ease-in-out, left 0.3s ease-in-out; }
         #global-banner.hidden { transform: translateY(-100%); }
         
-        /* Feed Tabs */
+        /* Feed Tabs & Swipe Animation */
         .feed-nav { display: flex; border-bottom: 1px solid var(--border-color); position: sticky; top: calc(50px + env(safe-area-inset-top) + var(--banner-height)); background-color: var(--primary-bg-color); z-index: 9; }
+        .feed-nav-tabs { display: flex; flex-grow: 1; }
         .feed-nav-tab { flex: 1; text-align: center; padding: 14px 0; font-weight: 600; cursor: pointer; color: var(--secondary-text-color); border-bottom: 2px solid transparent; }
         .feed-nav-tab.active { color: var(--primary-text-color); border-bottom-color: var(--accent-color); }
         .feed-nav-actions { display: flex; align-items: center; padding: 0 16px; }
-        .feed-nav-actions #open-create-post-btn { background: none; padding: 8px; color: var(--primary-text-color); }
-        .feed-nav-actions #open-create-post-btn .material-symbols-rounded { font-size: 28px; vertical-align: -6px; }
+        #open-create-post-btn { background: none; padding: 8px; color: var(--primary-text-color); cursor: pointer; }
+        #open-create-post-btn .material-symbols-rounded { font-size: 28px; vertical-align: -6px; }
+        #feed-container-wrapper { overflow-x: hidden; }
+        #feed-container { display: flex; width: 200%; transition: transform 0.3s ease-in-out; }
+        .feed-page { width: 50%; padding: 0 16px; }
 
         /* Create Post View */
         #create-post-view .container { padding-top: 20px; }
-        #create-post-form { padding: 16px; margin: 0 0 20px 0; border: 1px solid var(--border-color); border-radius: 12px; background-color: var(--secondary-bg-color); }
+        #create-post-form { padding: 16px; margin: 0; border: 1px solid var(--border-color); border-radius: 12px; background-color: var(--secondary-bg-color); }
         .create-post-options { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
         #post-type-select { padding: 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--primary-bg-color); color: var(--primary-text-color); font-size: 14px; }
         #create-post-form textarea { width: 100%; min-height: 120px; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; background-color: var(--primary-bg-color); color: var(--primary-text-color); font-size: 16px; resize: vertical; margin-bottom: 0; }
         .create-post-left-actions { display: flex; align-items: center; gap: 8px; }
-        .create-post-actions button { padding: 8px 16px; }
+        .create-post-actions button { padding: 10px 20px; font-size: 16px; }
         #add-image-btn { background: none; padding: 5px; color: var(--secondary-text-color); font-size: 26px; }
         #post-image-preview-container { position: relative; margin-top: 10px; }
-        #post-image-preview { max-width: 100%; max-height: 200px; border-radius: 12px; }
+        #post-image-preview { max-width: 100%; max-height: 300px; border-radius: 12px; }
         #remove-image-btn { position: absolute; top: 8px; right: 8px; background-color: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 18px; line-height: 24px; text-align: center; cursor: pointer; padding: 0; font-weight: bold; }
 
         .post { border: 1px solid var(--border-color); border-radius: 12px; margin: 20px 0; background-color: var(--secondary-bg-color); box-shadow: none; overflow: hidden; }
@@ -658,7 +663,7 @@
         <div id="main-app-view" class="view">
             <main>
                 <div class="feed-nav">
-                    <div class="feed-nav-tabs" style="display: flex; flex: 1;">
+                    <div class="feed-nav-tabs">
                         <div class="feed-nav-tab active" data-feed-type="foryou">For You</div>
                         <div class="feed-nav-tab" data-feed-type="following">Following</div>
                     </div>
@@ -666,8 +671,11 @@
                          <button id="open-create-post-btn" title="Create Post"><span class="material-symbols-rounded">add</span></button>
                     </div>
                 </div>
-                <div class="container">
-                    <section id="feed"></section>
+                <div id="feed-container-wrapper">
+                    <div id="feed-container">
+                        <section id="foryou-feed" class="feed-page"></section>
+                        <section id="following-feed" class="feed-page"></section>
+                    </div>
                 </div>
             </main>
         </div>
@@ -1012,7 +1020,16 @@
                     document.body.classList.toggle('logged-in', isUserLoggedIn);
                     Object.values(views).forEach(v => v.classList.remove('active'));
                     views[state.currentView]?.classList.add('active');
-                    if (state.currentView === 'feed') this.renderFeed(state.posts, document.getElementById('feed'), true);
+
+                    if (state.currentView === 'feed') {
+                        // On initial load of the feed view, render the 'For You' feed and reset state.
+                        this.renderFeed(state.posts, document.getElementById('foryou-feed'), true);
+                        document.getElementById('following-feed').innerHTML = ''; // Ensure other feed is clear
+                        document.getElementById('feed-container').style.transform = 'translateX(0)';
+                        document.querySelector('.feed-nav-tab[data-feed-type="foryou"]').classList.add('active');
+                        document.querySelector('.feed-nav-tab[data-feed-type="following"]').classList.remove('active');
+                        state.currentFeedType = 'foryou';
+                    }
                     if (state.currentView === 'profile') this.renderProfilePage();
                     if (state.currentView === 'editProfile') this.renderEditProfilePage();
                     if (state.currentView === 'messages') this.renderMessagesPage();
@@ -1026,10 +1043,6 @@
                     let postsToRender = [...validPosts];
 
                     if (isMainFeed) {
-                        document.querySelectorAll('.feed-nav-tab').forEach(tab => {
-                             tab.classList.toggle('active', tab.dataset.feedType === state.currentFeedType);
-                        });
-
                         if (state.currentFeedType === 'following') {
                              postsToRender = postsToRender.filter(post => {
                                  const isFollowed = state.currentUserFollowingList.includes(post.userId);
@@ -1480,7 +1493,7 @@
                         ui.setButtonState('register-btn', 'Sign Up', false);
                     }
                 },
-                async createPost() { const contentInput = document.getElementById('post-content-input'); let postContent = sanitizeHTML(contentInput.value.trim()); const imageUrl = state.postImageUrl; if (!postContent && !imageUrl && !state.editingPostId) return; if (imageUrl) { postContent += `<br><img src="${sanitizeHTML(imageUrl)}" alt="user image">`; } const isUpdating = !!state.editingPostId; const button = document.getElementById('submit-post-btn'); const originalButtonText = isUpdating ? 'Save Changes' : 'Post'; ui.setButtonState(button.id, 'Saving...', true); try { if (isUpdating) { await api.call('updatePost', { userId: state.currentUser.userId, postId: state.editingPostId, postContent: postContent }); } else { const postType = document.getElementById('post-type-select').value; const isStory = postType.startsWith('story'); const storyDuration = isStory ? parseInt(postType.split('-')[1]) : 0; await api.call('createPost', { userId: state.currentUser.userId, postContent, isStory, storyDuration }); } contentInput.value = ''; state.postImageUrl = null; state.editingPostId = null; ui.renderImagePreview(); button.textContent = 'Post'; document.getElementById('post-type-select').value = 'regular'; core.navigateTo('feed'); await core.refreshFeed(false); } catch (e) { alert(`Error: ${e.message}`); } finally { ui.setButtonState(button.id, originalButtonText, false); if (isUpdating) { button.textContent = 'Post'; state.editingPostId = null; } } },
+                async createPost() { const contentInput = document.getElementById('post-content-input'); let postContent = sanitizeHTML(contentInput.value.trim()); const imageUrl = state.postImageUrl; if (!postContent && !imageUrl && !state.editingPostId) return; if (imageUrl) { postContent += `<br><img src="${sanitizeHTML(imageUrl)}" alt="user image">`; } const isUpdating = !!state.editingPostId; const button = document.getElementById('submit-post-btn'); const originalButtonText = isUpdating ? 'Save Changes' : 'Post'; ui.setButtonState(button.id, 'Posting...', true); try { if (isUpdating) { await api.call('updatePost', { userId: state.currentUser.userId, postId: state.editingPostId, postContent: postContent }); } else { const postType = document.getElementById('post-type-select').value; const isStory = postType.startsWith('story'); const storyDuration = isStory ? parseInt(postType.split('-')[1]) : 0; await api.call('createPost', { userId: state.currentUser.userId, postContent, isStory, storyDuration }); } contentInput.value = ''; state.postImageUrl = null; state.editingPostId = null; ui.renderImagePreview(); button.textContent = 'Post'; document.getElementById('post-type-select').value = 'regular'; core.navigateTo('feed'); await core.refreshFeed(false); } catch (e) { alert(`Error: ${e.message}`); } finally { ui.setButtonState(button.id, originalButtonText, false); if (isUpdating) { button.textContent = 'Post'; state.editingPostId = null; } } },
                 enterEditMode(postId) { const post = state.posts.find(p => p.postId === postId); if (!post) return; core.navigateTo('createPost'); setTimeout(() => { const textContent = post.postContent.replace(/<br><img src=".*?" alt=".*?">/g, '').trim(); document.getElementById('post-content-input').value = textContent; document.getElementById('submit-post-btn').textContent = 'Save Changes'; state.editingPostId = postId; document.getElementById('post-content-input').focus(); }, 100); },
                 async addComment(postId, commentText) { if (!commentText.trim()) return; const tempComment = { commentId: `temp_${Date.now()}`, userId: state.currentUser.userId, displayName: state.currentUser.displayName, isVerified: state.currentUser.isVerified, commentText: commentText }; const postIndex = state.posts.findIndex(p => p.postId === postId); if (postIndex > -1) { state.posts[postIndex].comments.push(tempComment); ui.render(); } try { await api.call('addComment', { postId, userId: state.currentUser.userId, commentText }); await core.refreshFeed(false); } catch (e) { alert(`Error: ${e.message}`); const pIndex = state.posts.findIndex(p => p.postId === postId); if(pIndex > -1) { state.posts[pIndex].comments = state.posts[pIndex].comments.filter(c => c.commentId !== tempComment.commentId); ui.render(); }}},
                 async toggleLike(postId) { const post = state.posts.find(p => p.postId === postId); if (!post) return; const likeIndex = post.likes.findIndex(l => l.userId === state.currentUser.userId); if (likeIndex > -1) post.likes.splice(likeIndex, 1); else post.likes.push({ userId: state.currentUser.userId }); ui.render(); try { await api.call('toggleLike', { postId, userId: state.currentUser.userId }); } catch (e) { if (likeIndex > -1) post.likes.push({ userId: state.currentUser.userId }); else post.likes.pop(); ui.render(); alert(`Error: ${e.message}`); }},
@@ -1782,7 +1795,10 @@
                     else { window.scrollTo(0, 0); }
                 },
                 async refreshFeed(showLoader = true) { 
-                    if (showLoader && state.currentView === 'feed') ui.showFeedSkeleton(document.getElementById('feed')); 
+                    if (showLoader && state.currentView === 'feed') {
+                         const activeFeedEl = state.currentFeedType === 'foryou' ? document.getElementById('foryou-feed') : document.getElementById('following-feed');
+                         ui.showFeedSkeleton(activeFeedEl);
+                    }
                     try { 
                         const [postsAndConvosResult, notificationsResult] = await Promise.all([
                             api.call('getPosts', { userId: state.currentUser.userId }, 'GET'),
@@ -1829,10 +1845,23 @@
                         this.updateMessageDot();
                     } catch(e) { 
                         console.error("Feed refresh error:", e);
-                        if(state.currentView === 'feed') { document.getElementById('feed').innerHTML = `<p class="error-message">Could not load feed: ${e.message}</p>`; }
+                        if(state.currentView === 'feed') { document.getElementById('foryou-feed').innerHTML = `<p class="error-message">Could not load feed: ${e.message}</p>`; }
                         if (e.message.includes("validate user session")) { setTimeout(() => core.logout(), 2000); }
                     } finally { 
-                        if (['feed', 'profile', 'hashtagFeed', 'messages', 'settings', 'search', 'createPost'].includes(state.currentView)) ui.render(); 
+                        if (state.currentView === 'feed') {
+                            // After a refresh, update the currently active feed and clear the other one
+                            const activeFeedEl = state.currentFeedType === 'foryou' 
+                                ? document.getElementById('foryou-feed') 
+                                : document.getElementById('following-feed');
+                            ui.renderFeed(state.posts, activeFeedEl, true);
+                            
+                            const inactiveFeedEl = state.currentFeedType === 'foryou'
+                                ? document.getElementById('following-feed')
+                                : document.getElementById('foryou-feed');
+                            inactiveFeedEl.innerHTML = '';
+                        } else if (['profile', 'hashtagFeed', 'messages', 'settings', 'search', 'createPost'].includes(state.currentView)) {
+                             ui.render(); 
+                        }
                     }
                 },
                 updateNotificationDot() { document.getElementById('notification-dot').style.display = state.unreadNotificationCount > 0 ? 'block' : 'none'; },
@@ -1906,12 +1935,31 @@
                     document.querySelectorAll('.feed-nav-tab').forEach(tab => {
                         tab.addEventListener('click', () => {
                             const feedType = tab.dataset.feedType;
-                            if (state.currentFeedType !== feedType) {
-                                state.currentFeedType = feedType;
-                                ui.renderFeed(state.posts, document.getElementById('feed'), true);
+                            if (state.currentFeedType === feedType) return;
+
+                            state.currentFeedType = feedType;
+                            
+                            document.querySelectorAll('.feed-nav-tab').forEach(t => t.classList.remove('active'));
+                            tab.classList.add('active');
+
+                            const container = document.getElementById('feed-container');
+                            
+                            if (feedType === 'following') {
+                                container.style.transform = 'translateX(-50%)';
+                                const followingFeedEl = document.getElementById('following-feed');
+                                if (followingFeedEl.innerHTML.trim() === '') {
+                                    ui.renderFeed(state.posts, followingFeedEl, true);
+                                }
+                            } else { // foryou
+                                container.style.transform = 'translateX(0)';
+                                const foryouFeedEl = document.getElementById('foryou-feed');
+                                if (foryouFeedEl.innerHTML.trim() === '') {
+                                    ui.renderFeed(state.posts, foryouFeedEl, true);
+                                }
                             }
                         });
                     });
+
                     document.getElementById('open-create-post-btn').addEventListener('click', () => core.navigateTo('createPost'));
 
                     document.getElementById('new-chat-user-search').addEventListener('input', (e) => { clearTimeout(newChatSearchTimeout); newChatSearchTimeout = setTimeout(() => handlers.searchUsersForNewChat(e.target.value), 300); });
@@ -1977,7 +2025,7 @@
                     document.body.addEventListener('submit', (e) => { const commentForm = e.target.closest('.comment-form'); if(commentForm) { e.preventDefault(); const input = commentForm.querySelector('input'); handlers.addComment(e.target.closest('.post').dataset.postId, input.value); input.value = ''; } const messageForm = e.target.closest('#message-input-form'); if(messageForm) { e.preventDefault(); handlers.sendMessage(); } });
                     document.getElementById('auth-view').addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; const activeForm = !document.getElementById('login-form').classList.contains('hidden') ? document.getElementById('login-form') : document.getElementById('register-form'); e.preventDefault(); const inputs = [...activeForm.querySelectorAll('input')]; const currentInputIndex = inputs.findIndex(input => input === document.activeElement); if (currentInputIndex > -1 && currentInputIndex < inputs.length - 1) { inputs[currentInputIndex + 1].focus(); } else { activeForm.querySelector('button.primary').click(); } });
                 },
-                async initializeApp() { const savedUser = JSON.parse(localStorage.getItem('currentUser')); if (!savedUser) { return core.navigateTo('auth'); } state.currentUser = savedUser; core.navigateTo('feed'); ui.showFeedSkeleton(document.getElementById('feed')); try { await core.refreshFeed(false); core.startStoryCountdownInterval(); } catch (error) { alert(`Session error: ${error.message}. Please log in again.`); core.logout(); } },
+                async initializeApp() { const savedUser = JSON.parse(localStorage.getItem('currentUser')); if (!savedUser) { return core.navigateTo('auth'); } state.currentUser = savedUser; core.navigateTo('feed'); ui.showFeedSkeleton(document.getElementById('foryou-feed')); try { await core.refreshFeed(false); core.startStoryCountdownInterval(); } catch (error) { alert(`Session error: ${error.message}. Please log in again.`); core.logout(); } },
                 main() { core.setupEventListeners(); const savedTheme = localStorage.getItem('theme') || 'dark'; document.documentElement.setAttribute('data-theme', savedTheme); document.getElementById('theme-switch').checked = savedTheme === 'dark'; if (localStorage.getItem('currentUser')) { core.initializeApp(); } else { core.navigateTo('auth'); } }
             };
             
