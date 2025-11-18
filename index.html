@@ -86,7 +86,6 @@
         #global-banner { position: fixed; top: env(safe-area-inset-top); left: 0; right: 0; background-color: var(--primary-text-color); color: var(--primary-bg-color); text-align: center; padding: 8px 16px; font-size: 14px; font-weight: 600; z-index: 11; line-height: 1.4; transition: transform 0.3s ease-in-out, left 0.3s ease-in-out; }
         #global-banner.hidden { transform: translateY(-100%); }
         
-        /* ===== MODIFICATION: Removed top margin to close gap ===== */
         .feed-nav { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
         .feed-nav-tabs { display: flex; flex-grow: 1; }
         .feed-nav-tab { flex: 1; text-align: center; padding: 14px 0; font-weight: 600; cursor: pointer; color: var(--secondary-text-color); border-bottom: 2px solid transparent; }
@@ -98,7 +97,6 @@
         #feed-container { display: flex; width: 200%; transition: transform 0.3s ease-in-out; }
         .feed-page { width: 50%; padding: 0 16px; /* Restore padding here */ }
 
-        /* Create Post View */
         #create-post-view .container { padding-top: 20px; }
         #create-post-form { padding: 16px; margin: 0; border: 1px solid var(--border-color); border-radius: 12px; background-color: var(--secondary-bg-color); }
         .create-post-options { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
@@ -116,7 +114,6 @@
         .post-header-info { flex-grow: 1; }
         .post-display-name { font-weight: 600; font-size: 16px; display: inline-flex; align-items: center; }
         .post-timestamp { font-size: 14px; color: var(--secondary-text-color); margin-left: 8px; font-weight: 400; }
-        /* ===== MODIFICATION: Added cursor pointer for post detail view ===== */
         .post-content { padding: 0 16px 12px; font-size: 16px; white-space: pre-wrap; word-wrap: break-word; line-height: 1.5; cursor: pointer; }
         .post-content img { max-width: 100%; border-radius: 12px; margin-top: 10px; }
         .post-actions { padding: 8px 16px; display: flex; align-items: center; gap: 10px; }
@@ -153,6 +150,7 @@
         .user-info .display-name { font-weight: 600; display: inline-flex; align-items: center; }
         .user-info .username { color: var(--secondary-text-color); font-size: 14px; }
         #logout-btn { background: none; color: var(--error-color); font-size: 16px; padding: 0; }
+        #logout-button-container { display: none; }
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .switch input:disabled + .slider { cursor: not-allowed; opacity: 0.6; }
@@ -613,6 +611,7 @@
                         <input type="text" id="register-username" placeholder="Username (no spaces)" autocomplete="username" maxlength="25">
                         <input type="text" id="register-displayname" placeholder="Display Name" maxlength="30">
                         <input type="password" id="register-password" placeholder="Password" autocomplete="new-password">
+                        <p style="font-size: 13px; color: var(--secondary-text-color); margin-top: -8px; margin-bottom: 12px; text-align: left;">Use a new and unique password for Kangaroo</p>
                         <label class="form-group-tos">
                             <input type="checkbox" id="register-tos">
                             <span class="tos-checkmark"></span>
@@ -700,7 +699,6 @@
             <div class="container"><a class="back-btn" data-nav="feed">&larr; Back to Feed</a><div id="profile-content"></div><div id="profile-feed"></div></div>
         </div>
         
-        <!-- ===== ADDITION: New view for Post Detail Page ===== -->
         <div id="post-detail-view" class="view">
             <div class="container"></div>
         </div>
@@ -711,7 +709,7 @@
                 <div class="settings-section">
                     <h4 class="settings-section-title">👤 Account</h4>
                     <div class="setting-row" id="settings-user-info-row"></div>
-                    <div class="setting-row">
+                    <div class="setting-row" id="logout-button-container">
                         <button id="logout-btn">Log Out</button>
                     </div>
                 </div>
@@ -962,7 +960,6 @@
                 userProfileCache: {},
                 search: { query: '', results: null, isLoading: false },
                 currentFeedType: 'foryou', // 'foryou' or 'following'
-                // ===== ADDITION: State for new features =====
                 previousView: null,
                 currentPostDetail: null
             };
@@ -975,7 +972,6 @@
                 settings: document.getElementById('settings-view'),
                 search: document.getElementById('search-view'),
                 createPost: document.getElementById('create-post-view'),
-                // ===== ADDITION: Add post detail view =====
                 postDetail: document.getElementById('post-detail-view')
             };
 
@@ -1037,13 +1033,11 @@
                     if (state.currentView === 'messages') this.renderMessagesPage();
                     if (state.currentView === 'settings') this.renderSettingsPage();
                     if (state.currentView === 'search') this.renderSearchView();
-                    // ===== ADDITION: Render post detail view =====
                     if (state.currentView === 'postDetail') this.renderPostDetailPage();
                 },
-                // ===== ADDITION: New function to render post detail page =====
                 renderPostDetailPage() {
                     const container = views.postDetail.querySelector('.container');
-                    container.innerHTML = ''; // Clear previous content
+                    container.innerHTML = ''; 
 
                     if (!state.currentPostDetail) {
                         container.innerHTML = `<p class="error-message" style="text-align:center;">Could not load post.</p>`;
@@ -1053,7 +1047,7 @@
                     const backButton = document.createElement('a');
                     backButton.className = 'back-btn';
                     backButton.innerHTML = '&larr; Back';
-                    backButton.dataset.navBack = true; // Use a specific data attribute for this action
+                    backButton.dataset.navBack = true; 
                     
                     const postContentDiv = document.createElement('div');
                     postContentDiv.id = 'post-detail-content';
@@ -1061,7 +1055,6 @@
                     container.appendChild(backButton);
                     container.appendChild(postContentDiv);
 
-                    // Re-use the existing createPostElement function to render the post
                     const postElement = this.createPostElement(state.currentPostDetail);
                     postContentDiv.appendChild(postElement);
                 },
@@ -1078,7 +1071,7 @@
                                  const isOwnPost = post.userId === state.currentUser.userId;
                                  return isFollowed || isOwnPost;
                              }).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-                        } else { // For You feed logic
+                        } else { 
                             const now = new Date();
                             const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
                             const stories = []; const priorityPostsWithImage = []; const priorityPostsWithoutImage = []; const otherPosts = [];
@@ -1259,9 +1252,7 @@
                     
                     const postContentEl = postDiv.querySelector('.post-content');
                     postContentEl.innerHTML = this.formatPostContent(post.postContent);
-                    // ===== ADDITION: Add click listener for post detail view =====
                     postContentEl.addEventListener('click', (e) => {
-                        // Don't navigate if a link inside the content was clicked
                         if (e.target.tagName === 'A') {
                             return;
                         }
@@ -1588,7 +1579,6 @@
                         }
                     }
                 },
-                // ===== ADDITION: New handler for post detail navigation =====
                 async showPostDetail(postId) {
                     state.previousView = state.currentView;
                     const post = state.posts.find(p => p.postId === postId);
@@ -1609,7 +1599,7 @@
                         alert("Could not find user information.");
                         return;
                     }
-                    state.banningUserId = userId; // Store the ID of the user to ban
+                    state.banningUserId = userId; 
                     document.getElementById('ban-modal-title').textContent = `Ban ${userToBan.displayName}`;
                     document.getElementById('ban-reason-input').value = '';
                     ui.toggleModal('ban', true);
@@ -1635,7 +1625,7 @@
                         alert(result.message || 'User has been banned successfully.');
                         ui.toggleModal('ban', false);
                         state.banningUserId = null;
-                        await core.refreshFeed(true); // Refresh feed to remove banned user's content
+                        await core.refreshFeed(true); 
                     } catch (e) {
                         alert(`Error: ${e.message}`);
                     } finally {
@@ -1825,7 +1815,7 @@
                     try {
                         await api.call('editGroup', { userId: state.currentUser.userId, groupId: state.currentConversation.id, changes });
                         ui.toggleModal('groupSettings', false);
-                        await core.refreshFeed(true); // Force full refresh
+                        await core.refreshFeed(true); 
                         await handlers.loadConversation(state.currentConversation.id, true);
                     } catch (e) {
                         alert("Error saving changes: " + e.message);
@@ -1871,10 +1861,11 @@
                             if (navPfp) {
                                 navPfp.src = sanitizeHTML(state.currentUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${state.currentUser.username}`;
                             }
+                            document.getElementById('logout-button-container').style.display = 'flex';
                         } else { throw new Error("Could not validate user session."); }
                         
                         state.posts = posts;
-                        state.currentUserFollowingList = currentUserFollowingList; // Set this first
+                        state.currentUserFollowingList = currentUserFollowingList; 
 
                         posts.forEach(post => {
                             if (!state.userProfileCache[post.userId]) {
@@ -1998,7 +1989,7 @@
                                 if (followingFeedEl.innerHTML.trim() === '') {
                                     ui.renderFeed(state.posts, followingFeedEl, true);
                                 }
-                            } else { // foryou
+                            } else { 
                                 container.style.transform = 'translateX(0)';
                                 const foryouFeedEl = document.getElementById('foryou-feed');
                                 if (foryouFeedEl.innerHTML.trim() === '') {
@@ -2021,7 +2012,6 @@
                     
                     document.body.addEventListener('click', (e) => {
                         const target = e.target;
-                        // ===== ADDITION: Listener for Post Detail back button =====
                         const backBtn = target.closest('[data-nav-back]');
                         if (backBtn) {
                             e.preventDefault();
