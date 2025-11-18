@@ -474,47 +474,6 @@
         #new-chat-btn .material-symbols-rounded { font-size: 28px; vertical-align: -2px; }
         #conversation-header .options-btn { margin-left: auto; }
         
-        /* ===== ADDITION: Pull to Refresh styles ===== */
-        #main-app-view { position: relative; } /* Needed for indicator positioning */
-        #pull-to-refresh-indicator {
-            position: absolute;
-            top: -50px;
-            left: 0;
-            right: 0;
-            height: 50px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9;
-        }
-        #pull-to-refresh-indicator .spinner {
-            border: 4px solid var(--border-color);
-            border-top: 4px solid var(--accent-color);
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            opacity: 0;
-            transform: scale(0) rotate(0deg);
-            transition: opacity 0.2s, transform 0.2s;
-        }
-        #pull-to-refresh-indicator.visible .spinner {
-            opacity: 1;
-            transform: scale(1) rotate(180deg);
-        }
-        #pull-to-refresh-indicator.refreshing .spinner {
-            opacity: 1;
-            transform: scale(1);
-            animation: spin 1s linear infinite;
-        }
-        .ptr-transition {
-            transition: transform 0.3s ease-out;
-        }
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
-        }
-        /* ===== END ADDITION ===== */
-        
         @media (max-width: 1023px) {
             header {
                 top: auto;
@@ -680,7 +639,6 @@
                         <p id="ban-countdown" style="font-size: 1.2em; font-weight: 700; margin-top: 5px; text-align: center;"></p>
                     </div>
                 </div>
-                <button id="suspended-logout-btn" class="secondary">Log Out</button>
             </div>
         </div>
 
@@ -694,8 +652,6 @@
         </div>
 
         <div id="main-app-view" class="view">
-             <!-- ===== ADDITION: Pull to Refresh Element ===== -->
-            <div id="pull-to-refresh-indicator"><div class="spinner"></div></div>
             <div class="container">
                 <main>
                     <div class="feed-nav">
@@ -1008,8 +964,7 @@
                 currentFeedType: 'foryou', // 'foryou' or 'following'
                 // ===== ADDITION: State for new features =====
                 previousView: null,
-                currentPostDetail: null,
-                ptr: { startY: 0, diffY: 0, isDragging: false, isRefreshing: false }
+                currentPostDetail: null
             };
             
             const views = { 
@@ -1110,7 +1065,7 @@
                     const postElement = this.createPostElement(state.currentPostDetail);
                     postContentDiv.appendChild(postElement);
                 },
-                renderBanPage(banDetails) { if (state.banCountdownIntervalId) clearInterval(state.banCountdownIntervalId); const reasonEl = document.getElementById('ban-reason'); const timerContainer = document.getElementById('ban-timer-container'); const countdownEl = document.getElementById('ban-countdown'); reasonEl.textContent = banDetails.reason || 'No reason provided.'; if (banDetails.endDate === 'permanent') { timerContainer.classList.add('hidden'); return; } timerContainer.classList.remove('hidden'); const endDate = new Date(banDetails.endDate); const updateCountdown = () => { const now = new Date(); const diff = endDate - now; if (diff <= 0) { countdownEl.textContent = 'Your ban has expired. You can now log out and log back in.'; clearInterval(state.banCountdownIntervalId); state.banCountdownIntervalId = null; return; } const days = Math.floor(diff / (1000 * 60 * 60 * 24)); const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)); const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)); let countdownText = ''; if (days > 0) countdownText += `${days}d `; if (hours > 0 || days > 0) countdownText += `${hours}h `; countdownText += `${minutes}m`; countdownEl.textContent = countdownText.trim(); }; updateCountdown(); state.banCountdownIntervalId = setInterval(updateCountdown, 1000); },
+                renderBanPage(banDetails) { if (state.banCountdownIntervalId) clearInterval(state.banCountdownIntervalId); const reasonEl = document.getElementById('ban-reason'); const timerContainer = document.getElementById('ban-timer-container'); const countdownEl = document.getElementById('ban-countdown'); reasonEl.textContent = banDetails.reason || 'No reason provided.'; if (banDetails.endDate === 'permanent') { timerContainer.classList.add('hidden'); return; } timerContainer.classList.remove('hidden'); const endDate = new Date(banDetails.endDate); const updateCountdown = () => { const now = new Date(); const diff = endDate - now; if (diff <= 0) { countdownEl.textContent = 'Your ban has expired. Please refresh the page.'; clearInterval(state.banCountdownIntervalId); state.banCountdownIntervalId = null; return; } const days = Math.floor(diff / (1000 * 60 * 60 * 24)); const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)); const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)); let countdownText = ''; if (days > 0) countdownText += `${days}d `; if (hours > 0 || days > 0) countdownText += `${hours}h `; countdownText += `${minutes}m`; countdownEl.textContent = countdownText.trim(); }; updateCountdown(); state.banCountdownIntervalId = setInterval(updateCountdown, 1000); },
                 renderFeed(posts, container, isMainFeed = false) {
                     const validPosts = posts.filter(p => !p.isStory || new Date() < new Date(p.expiryTimestamp));
                     
@@ -1544,7 +1499,7 @@
             };
 
             const handlers = {
-                async login() { ui.hideError('login-error'); const [username, password] = [document.getElementById('login-username').value.trim(), document.getElementById('login-password').value.trim()]; if (!username || !password) return ui.showError('login-error', 'All fields required.'); ui.setButtonState('login-btn', 'Logging In...', true); try { const { user } = await api.call('login', { username, password }); state.currentUser = user; localStorage.setItem('currentUser', JSON.stringify(user)); await core.initializeApp(); } catch (e) { if (e.message === 'ACCOUNT_BANNED') { core.logout(false); ui.renderBanPage(e.banDetails); core.navigateTo('suspended'); } else if (e.message === 'SERVER_OUTAGE') { core.logout(false); core.navigateTo('outage'); } else { ui.showError('login-error', e.message); } } finally { ui.setButtonState('login-btn', 'Log In', false); } },
+                async login() { ui.hideError('login-error'); const [username, password] = [document.getElementById('login-username').value.trim(), document.getElementById('login-password').value.trim()]; if (!username || !password) return ui.showError('login-error', 'All fields required.'); ui.setButtonState('login-btn', 'Logging In...', true); try { const { user } = await api.call('login', { username, password }); state.currentUser = user; localStorage.setItem('currentUser', JSON.stringify(user)); await core.initializeApp(); } catch (e) { if (e.message === 'ACCOUNT_BANNED') { ui.renderBanPage(e.banDetails); core.navigateTo('suspended'); } else if (e.message === 'SERVER_OUTAGE') { core.logout(false); core.navigateTo('outage'); } else { ui.showError('login-error', e.message); } } finally { ui.setButtonState('login-btn', 'Log In', false); } },
                 async register() {
                     ui.hideError('register-error');
                     const [username, displayName, password] = [
@@ -1877,25 +1832,6 @@
                     } finally {
                         ui.setButtonState('save-group-changes-btn', 'Save Changes', false);
                     }
-                },
-                // ===== ADDITION: New handler to reset pull-to-refresh UI =====
-                resetPullToRefresh() {
-                    const indicator = document.getElementById('pull-to-refresh-indicator');
-                    const feedView = views.feed;
-                    
-                    feedView.classList.add('ptr-transition');
-                    indicator.classList.add('ptr-transition');
-                    
-                    feedView.style.transform = 'translateY(0px)';
-                    indicator.style.transform = 'translateY(0px)';
-                    
-                    indicator.classList.remove('refreshing', 'visible');
-
-                    setTimeout(() => {
-                        feedView.classList.remove('ptr-transition');
-                        indicator.classList.remove('ptr-transition');
-                        state.ptr.isRefreshing = false;
-                    }, 300);
                 }
             };
 
@@ -1926,7 +1862,7 @@
                         
                         if (currentUserData) {
                             if (currentUserData.isSuspended === 'OUTAGE') { core.logout(false); return core.navigateTo('outage'); }
-                            if (currentUserData.banDetails) { ui.renderBanPage(currentUserData.banDetails); core.logout(false); return core.navigateTo('suspended'); }
+                            if (currentUserData.banDetails) { ui.renderBanPage(currentUserData.banDetails); return core.navigateTo('suspended'); }
                             state.currentUser = currentUserData;
                             state.userProfileCache[currentUserData.userId] = currentUserData;
                             localStorage.setItem('currentUser', JSON.stringify(state.currentUser)); 
@@ -2030,7 +1966,6 @@
                     document.getElementById('messages-btn').addEventListener('click', () => handlers.loadMessagesView());
                     document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => { const modal = e.target.closest('.modal'); if(modal) { const modalName = modal.id.replace('-modal', '').replace(/-(\w)/g, (match, p1) => p1.toUpperCase()); ui.toggleModal(modalName, false); } }));
                     document.getElementById('logout-btn').addEventListener('click', core.logout);
-                    document.getElementById('suspended-logout-btn').addEventListener('click', core.logout);
                     document.getElementById('outage-logout-btn').addEventListener('click', core.logout);
                     document.getElementById('theme-switch').addEventListener('change', (e) => { const newTheme = e.target.checked ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', newTheme); localStorage.setItem('theme', newTheme); });
                     document.getElementById('back-to-profile-btn').addEventListener('click', () => { handlers.showProfile(state.profileUser.userId) });
@@ -2145,65 +2080,6 @@
                     });
                     document.body.addEventListener('submit', (e) => { const commentForm = e.target.closest('.comment-form'); if(commentForm) { e.preventDefault(); const input = commentForm.querySelector('input'); handlers.addComment(e.target.closest('.post').dataset.postId, input.value); input.value = ''; } const messageForm = e.target.closest('#message-input-form'); if(messageForm) { e.preventDefault(); handlers.sendMessage(); } });
                     document.getElementById('auth-view').addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; const activeForm = !document.getElementById('login-form').classList.contains('hidden') ? document.getElementById('login-form') : document.getElementById('register-form'); e.preventDefault(); const inputs = [...activeForm.querySelectorAll('input')]; const currentInputIndex = inputs.findIndex(input => input === document.activeElement); if (currentInputIndex > -1 && currentInputIndex < inputs.length - 1) { inputs[currentInputIndex + 1].focus(); } else { activeForm.querySelector('button.primary').click(); } });
-                    
-                    // ===== ADDITION: Event listeners for Pull to Refresh =====
-                    const feedView = views.feed;
-                    const indicator = document.getElementById('pull-to-refresh-indicator');
-                    const refreshThreshold = 70; // How far user needs to pull
-                    const pullResistance = 0.5; // Makes the pull feel heavier
-
-                    feedView.addEventListener('touchstart', (e) => {
-                        if (window.scrollY === 0 && state.currentView === 'feed') {
-                            state.ptr.startY = e.touches[0].pageY;
-                            state.ptr.isDragging = true;
-                        }
-                    }, { passive: true });
-
-                    feedView.addEventListener('touchmove', (e) => {
-                        if (!state.ptr.isDragging || state.ptr.isRefreshing) return;
-
-                        const currentY = e.touches[0].pageY;
-                        state.ptr.diffY = currentY - state.ptr.startY;
-
-                        if (state.ptr.diffY < 0) return; // Only for pulling down
-
-                        // This prevents the browser's native overscroll/refresh behavior
-                        if (e.cancelable) e.preventDefault();
-
-                        const pullDistance = Math.min(state.ptr.diffY * pullResistance, 100);
-                        feedView.style.transform = `translateY(${pullDistance}px)`;
-                        indicator.style.transform = `translateY(${pullDistance}px)`;
-
-                        if (pullDistance > refreshThreshold) {
-                           indicator.classList.add('visible');
-                        } else {
-                           indicator.classList.remove('visible');
-                        }
-                    }, { passive: false });
-
-                    feedView.addEventListener('touchend', () => {
-                        if (!state.ptr.isDragging || state.ptr.isRefreshing) return;
-                        
-                        state.ptr.isDragging = false;
-                        
-                        if (state.ptr.diffY * pullResistance > refreshThreshold) {
-                            state.ptr.isRefreshing = true;
-                            indicator.classList.add('refreshing');
-                            feedView.classList.add('ptr-transition');
-                            indicator.classList.add('ptr-transition');
-                            feedView.style.transform = `translateY(50px)`;
-                            indicator.style.transform = `translateY(50px)`;
-                            
-                            core.refreshFeed(false).finally(() => {
-                                handlers.resetPullToRefresh();
-                            });
-                        } else {
-                            handlers.resetPullToRefresh();
-                        }
-
-                        state.ptr.diffY = 0;
-                        state.ptr.startY = 0;
-                    }, { passive: true });
                 },
                 async initializeApp() { const savedUser = JSON.parse(localStorage.getItem('currentUser')); if (!savedUser) { return core.navigateTo('auth'); } state.currentUser = savedUser; core.navigateTo('feed'); ui.showFeedSkeleton(document.getElementById('foryou-feed')); try { await core.refreshFeed(false); core.startStoryCountdownInterval(); } catch (error) { alert(`Session error: ${error.message}. Please log in again.`); core.logout(); } },
                 main() { core.setupEventListeners(); const savedTheme = localStorage.getItem('theme') || 'dark'; document.documentElement.setAttribute('data-theme', savedTheme); document.getElementById('theme-switch').checked = savedTheme === 'dark'; if (localStorage.getItem('currentUser')) { core.initializeApp(); } else { core.navigateTo('auth'); } }
