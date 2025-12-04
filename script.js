@@ -125,12 +125,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 accounts.forEach(row => userMap[row['userID']] = row);
 
                 messagesData.forEach(row => {
-                    const msgId = row['messageID'] || row['messageId'];
-                    const senderId = row['senderID'] || row['senderId'];
-                    const recipientId = row['recipientID'] || row['recipientId'];
-                    const encodedContent = row['messageContent'];
-                    const timestamp = row['timestamp'];
-                    const isRead = row['isRead'];
+                    const msgId = getColumn(row, 'messageId', 'messageID');
+                    const senderId = getColumn(row, 'senderId', 'senderID');
+                    const recipientId = getColumn(row, 'recipientId', 'recipientID');
+                    const encodedContent = getColumn(row, 'messageContent');
+                    const timestamp = getColumn(row, 'timestamp');
+                    const isRead = getColumn(row, 'isRead');
 
                     if ((String(senderId) === String(currentUserId) && String(recipientId) === String(otherUserId)) || 
                         (String(senderId) === String(otherUserId) && String(recipientId) === String(currentUserId))) {
@@ -370,8 +370,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const conversationsMap = {};
                 messages.forEach(row => {
-                    const sid = row['senderID'] || row['senderId'];
-                    const rid = row['recipientID'] || row['recipientId'];
+                    const sid = getColumn(row, 'senderId', 'senderID');
+                    const rid = getColumn(row, 'recipientId', 'recipientID');
                     
                     let convoId = null;
                     let otherUser = null;
@@ -386,15 +386,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (convoId && otherUser) {
                         let decoded = '';
-                        try { decoded = atob(row['messageContent']); } catch { decoded = 'Error decoding.'; }
+                        const encodedContent = getColumn(row, 'messageContent');
+                        try { decoded = atob(encodedContent); } catch { decoded = 'Error decoding.'; }
                         if (!conversationsMap[convoId]) {
                             conversationsMap[convoId] = { otherUser, lastMessage: '', timestamp: '', unreadCount: 0, messages: [] };
                         }
                         const c = conversationsMap[convoId];
-                        const ts = row['timestamp'];
+                        const ts = getColumn(row, 'timestamp');
                         c.messages.push({ 
-                            messageId: row['messageID'], senderId: sid, messageContent: decoded, timestamp: ts, 
-                            isRead: row['isRead'], status: 'sent', senderName: userMap[sid]?.displayName 
+                            messageId: getColumn(row, 'messageId', 'messageID'), 
+                            senderId: sid, 
+                            messageContent: decoded, 
+                            timestamp: ts, 
+                            isRead: getColumn(row, 'isRead'), 
+                            status: 'sent', 
+                            senderName: userMap[sid]?.displayName 
                         });
                         if (new Date(ts) > new Date(c.timestamp || 0)) {
                             c.lastMessage = sid === currentUserId ? `You: ${decoded}` : decoded;
@@ -403,11 +409,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
+                // --- FIXED MESSAGE NOTIFICATIONS ---
                 messages.forEach(row => {
-                    const sid = row['senderID'] || row['senderId'];
-                    const rid = row['recipientID'] || row['recipientId'];
-                    if (sid !== currentUserId && rid === currentUserId && (row['isRead'] === 'FALSE' || row['isRead'] === false)) {
-                        if (conversationsMap[sid]) conversationsMap[sid].unreadCount = (conversationsMap[sid].unreadCount || 0) + 1;
+                    const sid = getColumn(row, 'senderId', 'senderID');
+                    const rid = getColumn(row, 'recipientId', 'recipientID');
+                    const isReadRaw = String(getColumn(row, 'isRead') || '');
+                    
+                    // Logic: If 'isRead' is NOT 'TRUE' (case-insensitive), it counts as unread.
+                    const isUnread = isReadRaw.toUpperCase() !== 'TRUE';
+
+                    if (sid !== currentUserId && rid === currentUserId && isUnread) {
+                        if (conversationsMap[sid]) {
+                            conversationsMap[sid].unreadCount = (conversationsMap[sid].unreadCount || 0) + 1;
+                        }
                     }
                 });
 
@@ -444,18 +458,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 posts.forEach(r => postAuthorMap[r['postID']] = r['userID']);
                 const currentUserBlockedSet = blockMap[currentUserId] || new Set();
 
+                // --- FIXED NOTIFICATIONS FILTERING (MAPPED TO SHEET HEADERS) ---
                 const notifications = notifData
-                    .filter(n => String(n.recipientUserId) === String(currentUserId))
-                    .filter(n => !state.deletedNotificationIds.has(n.notificationId))
-                    .filter(n => !currentUserBlockedSet.has(n.actorUserId)) 
+                    .filter(n => {
+                        const rId = getColumn(n, 'recieverId', 'recipientId', 'recipientUserId');
+                        return String(rId) === String(currentUserId);
+                    })
+                    .filter(n => {
+                        const nId = getColumn(n, 'notificationId', 'notificationID');
+                        return !state.deletedNotificationIds.has(nId);
+                    })
+                    .filter(n => {
+                         const actorId = getColumn(n, 'senderId', 'actorUserId', 'actorId');
+                         return !currentUserBlockedSet.has(actorId);
+                    }) 
                     .map(n => {
-                        const actor = userMap[n.actorUserId] || { displayName: 'Unknown', profilePictureUrl: '' };
-                        const paid = n.postId ? postAuthorMap[n.postId] : null;
+                        const actorId = getColumn(n, 'senderId', 'actorUserId', 'actorId');
+                        const actor = userMap[actorId] || { displayName: 'Unknown', profilePictureUrl: '' };
+                        const postId = getColumn(n, 'postId', 'postID');
+                        const paid = postId ? postAuthorMap[postId] : null;
+                        
+                        // User Sheet Header: 'dismissed' (FALSE = Show, TRUE = Hidden/Read)
+                        const dismissedRaw = String(getColumn(n, 'dismissed') || 'FALSE').toUpperCase();
+                        const isRead = dismissedRaw === 'TRUE';
+
                         return {
-                            notificationId: n.notificationId, actorUserId: n.actorUserId,
-                            actorDisplayName: actor.displayName, actorProfilePictureUrl: actor.profilePictureUrl,
-                            actionType: n.actionType, postId: n.postId, postAuthorId: paid,
-                            timestamp: n.timestamp, isRead: n.isRead
+                            notificationId: getColumn(n, 'notificationId', 'notificationID'),
+                            actorUserId: actorId,
+                            actorDisplayName: actor.displayName,
+                            actorProfilePictureUrl: actor.profilePictureUrl,
+                            actionType: getColumn(n, 'action', 'actionType', 'type'),
+                            postId: postId,
+                            postAuthorId: paid,
+                            timestamp: getColumn(n, 'timestamp', 'date'),
+                            isRead: isRead
                         };
                     }).reverse();
                 
@@ -1247,14 +1283,26 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.render();
         },
         clearAllNotifications() {
-            const ids = state.notifications.map(n => n.notificationId);
+            // FIXED: Capture IDs first
+            const ids = state.notifications.map(n => n.notificationId).filter(Boolean);
+            
+            // Optimistic update
             ids.forEach(id => state.deletedNotificationIds.add(id));
             localStorage.setItem('notificationBlacklist', JSON.stringify(Array.from(state.deletedNotificationIds)));
             state.notifications = [];
             ui.renderNotifications();
             state.unreadNotificationCount = 0;
             core.updateNotificationDot();
-            ids.forEach(id => api.call('deleteNotification', { userId: state.currentUser.userId, notificationId: id }));
+            
+            // Server sync: Try bulk delete if available, or loop
+            // Since backend is unknown, looping is the safer robust method for existing endpoints
+            if (ids.length > 0) {
+                // Try catch block inside loop to prevent one failure stopping others
+                ids.forEach(id => {
+                    api.call('deleteNotification', { userId: state.currentUser.userId, notificationId: id })
+                       .catch(e => console.error(`Failed to delete notification ${id} on server`, e));
+                });
+            }
         },
         async login() { 
             ui.hideError('login-error'); 
@@ -1821,6 +1869,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 let { notifications } = notificationsResult || { notifications: [] };
                 notifications = notifications.filter(n => !state.deletedNotificationIds.has(n.notificationId));
                 state.notifications = notifications;
+                
+                // --- FIXED NOTIFICATION DOT CALCULATION ---
+                // If isRead is not strictly 'TRUE', it counts as unread.
                 state.unreadNotificationCount = notifications.filter(n => String(n.isRead).toUpperCase() !== 'TRUE').length;
 
                 this.updateNotificationDot();
