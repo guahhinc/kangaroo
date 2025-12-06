@@ -1,5 +1,3 @@
---- START OF FILE style.css ---
-
 :root {
     --primary-bg-color: #ffffff;
     --secondary-bg-color: #fafafa;
@@ -44,7 +42,7 @@ body {
     margin: 0;
     padding: 0;
     transition: background-color 0.3s, color 0.3s;
-    /* FIX: Changed to 100dvh to handle mobile URL bars correctly */
+    /* 100dvh handles mobile browser bars better than 100vh */
     min-height: 100vh;
     min-height: 100dvh; 
     display: flex;
@@ -1902,6 +1900,11 @@ input:checked+.slider:before {
         border-bottom: none;
         border-right: 1px solid var(--border-color);
         padding: 20px;
+        
+        /* FIX: Reset these to prevent sidebar stretching across full screen */
+        right: auto; 
+        top: 0; 
+        bottom: 0;
     }
 
     header .logo {
