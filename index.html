@@ -68,6 +68,18 @@
             flex-direction: column;
         }
 
+        /* --- SNOW CANVAS --- */
+        #snow-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            display: block;
+        }
+
         /* --- ANIMATIONS --- */
         
         button:active, 
@@ -1102,8 +1114,8 @@
             margin-bottom: 20px;
             max-height: 200px;
             overflow-y: auto;
-        }
-        
+        }Source: local storage.
+
         #photo-library-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -2042,6 +2054,9 @@
 
 <body>
 
+    <!-- Snow Canvas -->
+    <canvas id="snow-canvas"></canvas>
+
     <header class="hidden">
         <img src="https://raw.githubusercontent.com/guahhinc/fire/main/Kangaroo.png" alt="Kangaroo Logo" class="logo"
             id="logo-btn">
@@ -2249,6 +2264,14 @@
                             <p class="setting-description">Change the website theme.</p>
                         </div>
                         <label class="switch"><input type="checkbox" id="theme-switch"><span
+                                class="slider"></span></label>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <span>Christmas Snow</span>
+                            <p class="setting-description">Show a snowing effect over the screen.</p>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="snow-switch"><span
                                 class="slider"></span></label>
                     </div>
                 </div>
@@ -2516,24 +2539,102 @@
                 }
             };
 
-            // ===== Data Aggregation (client-side getPosts logic) =====
+            // ===== Snow System =====
+            const snowSystem = {
+                canvas: document.getElementById('snow-canvas'),
+                ctx: null,
+                flakes: [],
+                animationId: null,
+
+                init() {
+                    this.ctx = this.canvas.getContext('2d');
+                    window.addEventListener('resize', () => this.resize());
+                    this.resize();
+                    this.createFlakes();
+                    this.animate();
+                },
+
+                resize() {
+                    this.canvas.width = window.innerWidth;
+                    this.canvas.height = window.innerHeight;
+                },
+
+                createFlakes() {
+                    const count = 150;
+                    this.flakes = [];
+                    for (let i = 0; i < count; i++) {
+                        this.flakes.push({
+                            x: Math.random() * this.canvas.width,
+                            y: Math.random() * this.canvas.height,
+                            r: Math.random() * 3 + 1,
+                            d: Math.random() * count,
+                            speed: Math.random() * 1 + 0.5,
+                            opacity: Math.random() * 0.5 + 0.3
+                        });
+                    }
+                },
+
+                draw() {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.ctx.fillStyle = "white";
+                    this.ctx.beginPath();
+                    for (let i = 0; i < this.flakes.length; i++) {
+                        const f = this.flakes[i];
+                        this.ctx.moveTo(f.x, f.y);
+                        this.ctx.globalAlpha = f.opacity;
+                        this.ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2, true);
+                    }
+                    this.ctx.fill();
+                    this.update();
+                },
+
+                update() {
+                    for (let i = 0; i < this.flakes.length; i++) {
+                        const f = this.flakes[i];
+                        f.y += f.speed;
+                        f.x += Math.sin(f.d) * 0.5;
+
+                        if (f.y > this.canvas.height) {
+                            this.flakes[i] = { x: Math.random() * this.canvas.width, y: -10, r: f.r, d: f.d, speed: f.speed, opacity: f.opacity };
+                        }
+                    }
+                },
+
+                animate() {
+                    if (!state.snowEnabled) {
+                        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                        return;
+                    }
+                    this.draw();
+                    this.animationId = requestAnimationFrame(() => this.animate());
+                },
+
+                toggle(enabled) {
+                    if (enabled) {
+                        this.canvas.style.display = 'block';
+                        this.animate();
+                    } else {
+                        this.canvas.style.display = 'none';
+                        if (this.animationId) cancelAnimationFrame(this.animationId);
+                    }
+                }
+            };
+
+            // ===== Data Aggregation =====
             const dataAggregator = {
                 async getPhotoLibrary() {
                     try {
                         const photos = await tsvParser.fetchSheet('photoLibrary');
-                        // More robust checking: Scan all columns in the row for a valid URL
                         const urlList = [];
                         photos.forEach(row => {
-                            // Check explicit column if it exists
                             if(row['imageUrl'] && row['imageUrl'].startsWith('http')) {
                                 urlList.push(row['imageUrl']);
                             } else {
-                                // Fallback: check any value in the row
                                 const values = Object.values(row);
                                 for(const val of values) {
                                     if(val && typeof val === 'string' && val.startsWith('http')) {
                                         urlList.push(val);
-                                        break; // Found a URL in this row
+                                        break; 
                                     }
                                 }
                             }
@@ -2544,7 +2645,6 @@
                         return [];
                     }
                 },
-                // ... (getConversationHistory, getPosts, getUserProfile, search remain the same)
                 async getConversationHistory({ userId, otherUserId }) {
                     try {
                         const [messagesData, accounts] = await Promise.all([
@@ -2631,6 +2731,7 @@
                         });
 
                         const postsByUserMap = {};
+                        postsByUserMap[uId] = [];
                         postsData.forEach(row => {
                             const postId = row['postID'];
                             const uId = row['userID'];
@@ -2659,7 +2760,7 @@
                                     following: (followingMap[uId] || []).length,
                                     totalLikes,
                                     isAdmin: String(row['isAdmin'] || 'FALSE').toUpperCase() === 'TRUE',
-                                    isSuspended: false // Basic check
+                                    isSuspended: false 
                                 };
                             }
                         });
@@ -2717,12 +2818,10 @@
                         return { users, posts };
                     } catch (error) { console.error('Error in search TSV:', error); throw error; }
                 },
-                // FIXED: More Robust Notification Parsing
                 async getNotifications(params) {
                     try {
                         const currentUserId = params.userId || params;
                         
-                        // Fetch required data
                         const [notifText, blocks, accounts, postsData] = await Promise.all([
                             (await fetch(TSV_SHEETS.notifications.url + '&cachebust=' + Date.now())).text(),
                             tsvParser.fetchSheet('blocks'),
@@ -2730,9 +2829,7 @@
                             tsvParser.fetchSheet('posts')
                         ]);
                         
-                        // Parse Notifications safely
                         const lines = notifText.split('\n').filter(line => line.trim() !== '');
-                        // Check if first line is header
                         if (lines.length > 0 && lines[0].toLowerCase().includes('notificationid')) {
                             lines.shift();
                         }
@@ -2740,7 +2837,7 @@
                         const notifications = [];
                         lines.forEach(line => {
                             const cols = line.split('\t');
-                            if(cols.length >= 4) { // Basic validation
+                            if(cols.length >= 4) { 
                                 notifications.push({
                                     notificationId: cols[0] || '', 
                                     recipientUserId: cols[1] || '', 
@@ -2815,8 +2912,9 @@
                 pendingCommentImages: {},
                 pendingCommentDrafts: {},
                 pendingCommentImagePostId: null,
-                pendingPostCode: null, // NEW
-                photoLibraryCache: null
+                pendingPostCode: null, 
+                photoLibraryCache: null,
+                snowEnabled: true // Christmas feature
             };
 
             const views = {
@@ -2934,7 +3032,6 @@
                     if (state.currentView === 'search') this.renderSearchView();
                     if (state.currentView === 'postDetail') this.renderPostDetailPage();
                 },
-                // ... (renderPostDetailPage, renderBanPage, renderFeed, renderProfilePage remain same)
                 renderPostDetailPage() {
                     const container = views.postDetail.querySelector('.container');
                     container.innerHTML = '';
@@ -3003,24 +3100,19 @@
                 
                 formatPostContent(content) {
                     if (!content) return '';
-                    // Replace new lines with <br> tags immediately to ensure they render
                     let processed = content.replace(/\n/g, '<br>');
                     
-                    // 1. Video Embeds (Youtube)
                     processed = processed.replace(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/g,
                         '<div class="video-container"><iframe src="https://www.youtube.com/embed/$1" allowfullscreen></iframe></div>');
                     
-                    // 2. Video Embeds (Direct MP4/WebM)
                     processed = processed.replace(/(https?:\/\/.*\.(?:mp4|webm))/g,
                         '<video controls src="$1"></video>');
 
-                    // 3. Linkify (Basic)
                     processed = processed.replace(/(?<!src=")(?<!href=")(https?:\/\/[^\s<]+)(?!>)/g, (match) => {
                         if(match.includes('youtube.com/embed') || match.match(/\.(mp4|webm)$/)) return match;
                         return `<a href="${match}" target="_blank" rel="noopener" class="hashtag-link">${match}</a>`;
                     });
 
-                    // 4. Code Embeds - UPDATED WITH FULLSCREEN BUTTON
                     processed = processed.replace(/\[HTML_EMBED\]([\s\S]*?)\[\/HTML_EMBED\]/g, (match, b64Code) => {
                         try {
                             const decoded = atob(b64Code);
@@ -3039,7 +3131,6 @@
                         } catch(e) { return '[Invalid Code Block]'; }
                     });
 
-                    // 5. Hashtags
                     let inTag = false;
                     let formattedContent = "";
                     for (let i = 0; i < processed.length; i++) {
@@ -3104,8 +3195,6 @@
                         gallery.innerHTML = '<p style="color:var(--error-color); font-size:14px;">Failed to load avatars.</p>';
                     }
                 },
-                
-                // NEW: Render the pending code block below the textarea
                 renderCodePreview() {
                     const container = document.getElementById('post-code-preview-container');
                     if(state.pendingPostCode) {
@@ -3136,7 +3225,6 @@
                     const postContentEl = postDiv.querySelector('.post-content'); postContentEl.innerHTML = this.formatPostContent(post.postContent); postContentEl.addEventListener('click', (e) => { if (e.target.tagName === 'A') return; if(e.target.tagName === 'VIDEO' || e.target.tagName === 'IFRAME') return; handlers.showPostDetail(post.postId); });
                     return postDiv;
                 },
-                // ... (createCommentElement, renderSearchView, renderSearchResults, renderNotifications, renderImagePreview, skeletons, toggleModal, renderProfileShortcutModal, renderSettingsPage, showError, hideError, setButtonState, renderMessagesPage, renderConversationsList, renderConversationHistory, createMessageBubble - remain largely the same)
                 createCommentElement(comment) {
                      const isAuthor = comment.userId === state.currentUser.userId; const isAdmin = state.currentUser.isAdmin; const pfpUrl = sanitizeHTML(comment.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${comment.displayName}`; const optionsMenuHTML = (isAuthor || isAdmin) ? `<div class="post-options"> <button class="options-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button> <div class="options-menu hidden"> <button class="delete-btn" data-action="delete-comment">Delete Comment</button> </div> </div>` : '';
                      return `<div class="comment" data-comment-id="${comment.commentId}" data-user-id="${comment.userId}"> <div class="comment-header"> <div class="comment-header-main" data-user-id="${comment.userId}"> <img src="${pfpUrl}" class="pfp"> <div> <a class="comment-author">${sanitizeHTML(comment.displayName)} ${String(comment.isVerified).toUpperCase() === 'TRUE' ? VERIFIED_SVG : ''}</a> <span class="comment-timestamp">${formatTimestamp({ timestamp: comment.timestamp })}</span> </div> </div> ${optionsMenuHTML} </div> <div class="comment-text">${this.formatCommentContent(comment.commentText)}</div> </div>`;
@@ -3154,7 +3242,7 @@
                     if (show === true && modalName === 'imageUrl') { handlers.loadPhotoLibrary(); }
                 },
                 renderProfileShortcutModal() { const user = state.currentUser; if (!user) return; const modalContent = modals.profileShortcut.querySelector('.modal-content'); modalContent.innerHTML = ` <button data-action="go-to-profile" data-user-id="${user.userId}"> <span class="material-symbols-rounded">account_circle</span> View Profile </button> <button data-action="go-to-settings"> <span class="material-symbols-rounded">settings</span> Settings </button> `; },
-                renderSettingsPage() { const user = state.currentUser; const pfpUrl = sanitizeHTML(user.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${user.username}`; const isVerified = String(user.isVerified).toUpperCase() === 'TRUE'; document.getElementById('settings-user-info-row').innerHTML = ` <a id="settings-profile-link" data-user-id="${user.userId}" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; flex-grow: 1; cursor: pointer;"> <img src="${pfpUrl}" class="pfp pfp-sm"> <div class="user-info"> <div class="display-name">${sanitizeHTML(user.displayName)} ${isVerified ? VERIFIED_SVG : ''}</div> <div class="username">@${sanitizeHTML(user.username)}</div> </div> </a>`; document.getElementById('post-visibility-select').value = state.currentUser.postVisibility || 'Everyone'; document.getElementById('privacy-switch').checked = state.currentUser.profilePrivacy === 'private'; const blockedListContainer = document.getElementById('blocked-users-list'); if (state.blockedUsersList && state.blockedUsersList.length > 0) { blockedListContainer.innerHTML = state.blockedUsersList.map(blockedUser => { const pfp = sanitizeHTML(blockedUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${blockedUser.displayName}`; return ` <div class="blocked-user-row setting-row"> <img src="${pfp}" class="pfp pfp-sm" style="cursor:default;"> <span class="blocked-user-info">${sanitizeHTML(blockedUser.displayName)}</span> <button class="secondary unblock-btn" data-action="unblock-user" data-user-id="${blockedUser.userId}">Unblock</button> </div> `; }).join(''); } else { blockedListContainer.innerHTML = '<p style="color: var(--secondary-text-color); font-size: 14px; padding: 8px 0;">You haven\'t blocked anyone.</p>'; } },
+                renderSettingsPage() { const user = state.currentUser; const pfpUrl = sanitizeHTML(user.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${user.username}`; const isVerified = String(user.isVerified).toUpperCase() === 'TRUE'; document.getElementById('settings-user-info-row').innerHTML = ` <a id="settings-profile-link" data-user-id="${user.userId}" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; flex-grow: 1; cursor: pointer;"> <img src="${pfpUrl}" class="pfp pfp-sm"> <div class="user-info"> <div class="display-name">${sanitizeHTML(user.displayName)} ${isVerified ? VERIFIED_SVG : ''}</div> <div class="username">@${sanitizeHTML(user.username)}</div> </div> </a>`; document.getElementById('post-visibility-select').value = state.currentUser.postVisibility || 'Everyone'; document.getElementById('privacy-switch').checked = state.currentUser.profilePrivacy === 'private'; document.getElementById('snow-switch').checked = state.snowEnabled; const blockedListContainer = document.getElementById('blocked-users-list'); if (state.blockedUsersList && state.blockedUsersList.length > 0) { blockedListContainer.innerHTML = state.blockedUsersList.map(blockedUser => { const pfp = sanitizeHTML(blockedUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${blockedUser.displayName}`; return ` <div class="blocked-user-row setting-row"> <img src="${pfp}" class="pfp pfp-sm" style="cursor:default;"> <span class="blocked-user-info">${sanitizeHTML(blockedUser.displayName)}</span> <button class="secondary unblock-btn" data-action="unblock-user" data-user-id="${blockedUser.userId}">Unblock</button> </div> `; }).join(''); } else { blockedListContainer.innerHTML = '<p style="color: var(--secondary-text-color); font-size: 14px; padding: 8px 0;">You haven\'t blocked anyone.</p>'; } },
                 showError(elId, msg) { const el = document.getElementById(elId); el.textContent = msg; el.classList.remove('hidden'); },
                 hideError(elId) { document.getElementById(elId).classList.add('hidden'); },
                 setButtonState(btnId, text, disabled) { const btn = document.getElementById(btnId); if (btn) { btn.textContent = text; btn.disabled = disabled; } },
@@ -3175,10 +3263,8 @@
                     grid.innerHTML = '';
                     state.photoLibraryCache.forEach(url => {
                         const img = document.createElement('img'); img.src = url; img.className = 'lib-photo';
-                        // Auto-Done behavior for Modal
                         img.addEventListener('click', () => { 
                             document.getElementById('image-url-modal-input').value = url; 
-                            // Simulate Done button click for instant submission
                             document.getElementById('image-url-modal-done-btn').click();
                         });
                         grid.appendChild(img);
@@ -3188,7 +3274,7 @@
                 removeCommentImage(postId) { delete state.pendingCommentImages[postId]; ui.render(); },
                 clearAllNotifications() { const ids = state.notifications.map(n => n.notificationId); ids.forEach(id => state.deletedNotificationIds.add(id)); localStorage.setItem('notificationBlacklist', JSON.stringify(Array.from(state.deletedNotificationIds))); state.notifications = []; ui.renderNotifications(); state.unreadNotificationCount = 0; core.updateNotificationDot(); ids.forEach(id => api.call('deleteNotification', { userId: state.currentUser.userId, notificationId: id })); },
                 async login() { ui.hideError('login-error'); const [username, password] = [document.getElementById('login-username').value.trim(), document.getElementById('login-password').value.trim()]; if (!username || !password) return ui.showError('login-error', 'All fields required.'); ui.setButtonState('login-btn', 'Logging In...', true); try { const { user } = await api.call('login', { username, password }); state.currentUser = user; localStorage.setItem('currentUser', JSON.stringify(user)); await core.initializeApp(); } catch (e) { if (e.message === 'ACCOUNT_BANNED') { ui.renderBanPage(e.banDetails); core.navigateTo('suspended'); } else if (e.message === 'SERVER_OUTAGE') { core.logout(false); core.navigateTo('outage'); } else { ui.showError('login-error', e.message); } } finally { ui.setButtonState('login-btn', 'Log In', false); } },
-                async register() { /* ... */ ui.hideError('register-error'); const [username, displayName, password, confirmPassword] = [document.getElementById('register-username').value.trim(), document.getElementById('register-displayname').value.trim(), document.getElementById('register-password').value.trim(), document.getElementById('register-password-confirm').value.trim()]; const tosChecked = document.getElementById('register-tos').checked; if (!tosChecked) return ui.showError('register-error', 'You must agree to the Terms of Service.'); if (!username || !displayName || !password || !confirmPassword) return ui.showError('register-error', 'All fields required.'); if (password !== confirmPassword) return ui.showError('register-error', 'Passwords do not match.'); if (password.length < 4) return ui.showError('register-error', 'Password must be at least 4 characters long.'); if (username.length > 25) return ui.showError('register-error', 'Username cannot be longer than 25 characters.'); if (displayName.length > 30) return ui.showError('register-error', 'Display Name cannot be longer than 30 characters.'); const usernameRegex = /^[a-zA-Z0-9_.]+$/; if (!usernameRegex.test(username)) { return ui.showError('register-error', 'Username can only contain letters, numbers, dots, and underscores.'); } ui.setButtonState('register-btn', 'Signing Up...', true); try { const { user } = await api.call('register', { username, displayName, password }); state.currentUser = user; localStorage.setItem('currentUser', JSON.stringify(user)); await core.initializeApp(); } catch (e) { ui.showError('register-error', e.message); } finally { ui.setButtonState('register-btn', 'Sign Up', false); } },
+                async register() { ui.hideError('register-error'); const [username, displayName, password, confirmPassword] = [document.getElementById('register-username').value.trim(), document.getElementById('register-displayname').value.trim(), document.getElementById('register-password').value.trim(), document.getElementById('register-password-confirm').value.trim()]; const tosChecked = document.getElementById('register-tos').checked; if (!tosChecked) return ui.showError('register-error', 'You must agree to the Terms of Service.'); if (!username || !displayName || !password || !confirmPassword) return ui.showError('register-error', 'All fields required.'); if (password !== confirmPassword) return ui.showError('register-error', 'Passwords do not match.'); if (password.length < 4) return ui.showError('register-error', 'Password must be at least 4 characters long.'); if (username.length > 25) return ui.showError('register-error', 'Username cannot be longer than 25 characters.'); if (displayName.length > 30) return ui.showError('register-error', 'Display Name cannot be longer than 30 characters.'); const usernameRegex = /^[a-zA-Z0-9_.]+$/; if (!usernameRegex.test(username)) { return ui.showError('register-error', 'Username can only contain letters, numbers, dots, and underscores.'); } ui.setButtonState('register-btn', 'Signing Up...', true); try { const { user } = await api.call('register', { username, displayName, password }); state.currentUser = user; localStorage.setItem('currentUser', JSON.stringify(user)); await core.initializeApp(); } catch (e) { ui.showError('register-error', e.message); } finally { ui.setButtonState('register-btn', 'Sign Up', false); } },
                 
                 async createPost() { 
                     const contentInput = document.getElementById('post-content-input'); 
@@ -3197,10 +3283,8 @@
                     
                     if (!postContent && !imageUrl && !state.editingPostId && !state.pendingPostCode) return; 
                     
-                    // Attach Image
                     if (imageUrl) { postContent += `<br><img src="${sanitizeHTML(imageUrl)}" alt="user image">`; } 
                     
-                    // Attach Code (Backend Only - not visible in textarea)
                     if (state.pendingPostCode) {
                         postContent += `\n[HTML_EMBED]${state.pendingPostCode}[/HTML_EMBED]`;
                     }
@@ -3210,7 +3294,6 @@
                     const originalButtonText = isUpdating ? 'Save Changes' : 'Post'; 
                     ui.setButtonState(button.id, 'Posting...', true); 
                     
-                    // --- OPTIMISTIC UI UPDATE START ---
                     if (!isUpdating) {
                         const tempPost = {
                             postId: `temp_${Date.now()}`,
@@ -3226,15 +3309,13 @@
                             isStory: false
                         };
                         state.posts.unshift(tempPost);
-                        // Reset input immediately for UX
                         contentInput.value = ''; 
                         state.postImageUrl = null; 
-                        state.pendingPostCode = null; // Clear pending code
+                        state.pendingPostCode = null; 
                         ui.renderImagePreview(); 
-                        ui.renderCodePreview(); // Clear preview
+                        ui.renderCodePreview(); 
                         core.navigateTo('feed');
                     }
-                    // --- OPTIMISTIC UI UPDATE END ---
 
                     try { 
                         if (isUpdating) { 
@@ -3243,11 +3324,9 @@
                         } else { 
                             await api.call('createPost', { userId: state.currentUser.userId, postContent, isStory: false, storyDuration: 0 }); 
                         } 
-                        // Delay fetch slightly to allow Sheet to update
                         setTimeout(() => core.refreshFeed(false), 2000);
                     } catch (e) { 
                         alert(`Error: ${e.message}`); 
-                        // Revert optimistic update on error
                         if(!isUpdating) {
                             state.posts.shift();
                             ui.render();
@@ -3288,7 +3367,7 @@
                 async updateProfile() { ui.hideError('edit-profile-error'); const [displayName, pfpUrl, description] = [document.getElementById('edit-display-name').value, document.getElementById('edit-pfp-url').value, document.getElementById('edit-description').value]; ui.setButtonState('save-profile-btn', 'Saving...', true); try { await api.call('updateProfile', { userId: state.currentUser.userId, displayName, profilePictureUrl: pfpUrl, description }); state.currentUser = { ...state.currentUser, displayName, profilePictureUrl: pfpUrl, description }; localStorage.setItem('currentUser', JSON.stringify(state.currentUser)); await core.refreshFeed(false); await handlers.showProfile(state.currentUser.userId); } catch (e) { ui.showError('edit-profile-error', e.message); } finally { ui.setButtonState('save-profile-btn', 'Save Changes', false); } },
                 async deletePost(postId) { if (!confirm("Delete this post?")) return; state.deletedPostIds.add(postId); localStorage.setItem('deletedPostIds', JSON.stringify(Array.from(state.deletedPostIds))); const postToDeleteIndex = state.posts.findIndex(p => p.postId === postId); if (postToDeleteIndex === -1) return; const postToDelete = state.posts[postToDeleteIndex]; state.posts.splice(postToDeleteIndex, 1); ui.render(); try { await api.call('deletePost', { postId, userId: state.currentUser.userId }); } catch (e) { alert(`Error: Could not delete post. ${e.message}`); state.deletedPostIds.delete(postId); localStorage.setItem('deletedPostIds', JSON.stringify(Array.from(state.deletedPostIds))); state.posts.splice(postToDeleteIndex, 0, postToDelete); ui.render(); } },
                 async deleteComment(commentId) { if (!confirm("Delete this comment?")) return; state.deletedCommentIds.add(commentId); localStorage.setItem('deletedCommentIds', JSON.stringify(Array.from(state.deletedCommentIds))); let postIndex = -1, commentIndex = -1, commentToDelete = null; for (let i = 0; i < state.posts.length; i++) { const foundIndex = state.posts[i].comments.findIndex(c => c.commentId === commentId); if (foundIndex !== -1) { postIndex = i; commentIndex = foundIndex; commentToDelete = state.posts[i].comments[foundIndex]; break; } } if (postIndex === -1) return; state.posts[postIndex].comments.splice(commentIndex, 1); ui.render(); try { await api.call('deleteComment', { commentId, userId: state.currentUser.userId }); } catch (e) { alert(`Error: Could not delete comment. ${e.message}`); state.deletedCommentIds.delete(commentId); localStorage.setItem('deletedCommentIds', JSON.stringify(Array.from(state.deletedCommentIds))); state.posts[postIndex].comments.splice(commentIndex, 0, commentToDelete); ui.render(); } },
-                async toggleFollow(followingId) { /* ... */ const followBtn = document.getElementById('follow-btn'); if (!followBtn) return; followBtn.disabled = true; const isFollowing = state.currentUserFollowingList.includes(followingId); const newStatus = !isFollowing; state.pendingOverrides.follows[followingId] = { status: newStatus, timestamp: Date.now() }; if (newStatus) state.currentUserFollowingList.push(followingId); else state.currentUserFollowingList = state.currentUserFollowingList.filter(id => id !== followingId); if (state.profileUser && state.profileUser.userId === followingId) { const isFollower = state.currentUserFollowersList.includes(followingId); if(newStatus && isFollower) state.profileUser.relationship = 'Friends'; else if(newStatus) state.profileUser.relationship = 'Following'; else if(isFollower) state.profileUser.relationship = 'Follows You'; else state.profileUser.relationship = 'None'; ui.renderProfilePage(); } try { const result = await api.call('toggleFollow', { followerId: state.currentUser.userId, followingId }); if(state.profileUser && state.profileUser.userId === followingId) { state.profileUser.relationship = result.newRelationship; ui.renderProfilePage(); } } catch (e) { delete state.pendingOverrides.follows[followingId]; if (!newStatus) state.currentUserFollowingList.push(followingId); else state.currentUserFollowingList = state.currentUserFollowingList.filter(id => id !== followingId); alert(`Error: ${e.message}`); ui.renderProfilePage(); } },
+                async toggleFollow(followingId) { const followBtn = document.getElementById('follow-btn'); if (!followBtn) return; followBtn.disabled = true; const isFollowing = state.currentUserFollowingList.includes(followingId); const newStatus = !isFollowing; state.pendingOverrides.follows[followingId] = { status: newStatus, timestamp: Date.now() }; if (newStatus) state.currentUserFollowingList.push(followingId); else state.currentUserFollowingList = state.currentUserFollowingList.filter(id => id !== followingId); if (state.profileUser && state.profileUser.userId === followingId) { const isFollower = state.currentUserFollowersList.includes(followingId); if(newStatus && isFollower) state.profileUser.relationship = 'Friends'; else if(newStatus) state.profileUser.relationship = 'Following'; else if(isFollower) state.profileUser.relationship = 'Follows You'; else state.profileUser.relationship = 'None'; ui.renderProfilePage(); } try { const result = await api.call('toggleFollow', { followerId: state.currentUser.userId, followingId }); if(state.profileUser && state.profileUser.userId === followingId) { state.profileUser.relationship = result.newRelationship; ui.renderProfilePage(); } } catch (e) { delete state.pendingOverrides.follows[followingId]; if (!newStatus) state.currentUserFollowingList.push(followingId); else state.currentUserFollowingList = state.currentUserFollowingList.filter(id => id !== followingId); alert(`Error: ${e.message}`); ui.renderProfilePage(); } },
                 async search(query) { try { const results = await api.call('search', { query, currentUserId: state.currentUser.userId }, 'GET'); state.search.results = results; } catch (e) { document.getElementById('search-results').innerHTML = `<p class="error-message">Search failed: ${e.message}</p>`; state.search.results = { users: [], posts: [] }; } finally { state.search.isLoading = false; if (state.currentView === 'search') { ui.renderSearchView(); } } },
                 async showProfile(userId, scrollToPostId = null) {
                     if (state.currentView !== 'profile') state.feedScrollPosition = window.scrollY; state.scrollToPostId = scrollToPostId; core.navigateTo('profile');
@@ -3313,8 +3392,6 @@
                 async deleteMessage(messageId) { if (!confirm("Are you sure you want to unsend this message? This cannot be undone.")) return; const messageWrapper = document.querySelector(`.message-wrapper[data-message-id="${messageId}"]`); const messageStatus = document.querySelector(`.message-wrapper[data-message-id="${messageId}"] + .message-status`); if (!messageWrapper) return; messageWrapper.style.opacity = '0.5'; try { await api.call('deleteMessage', { userId: state.currentUser.userId, messageId }); const messageIndex = state.currentConversation.messages.findIndex(m => m.messageId === messageId); if (messageIndex > -1) { state.currentConversation.messages.splice(messageIndex, 1); } messageWrapper.remove(); if (messageStatus) messageStatus.remove(); } catch (e) { alert(`Error: Could not unsend message. ${e.message}`); messageWrapper.style.opacity = '1'; } },
                 async pollNewMessages(otherUserId) { if (state.currentView !== 'messages' || state.currentConversation.id !== otherUserId) { if (state.messagePollingIntervalId) clearInterval(state.messagePollingIntervalId); return; } try { const { messages: remoteMessages } = await api.call('getConversationHistory', { userId: state.currentUser.userId, otherUserId, isGroup: false }, 'GET'); const currentMessages = state.currentConversation.messages; const remoteIds = new Set(remoteMessages.map(m => m.messageId)); const localOnlyMessages = currentMessages.filter(m => !remoteIds.has(m.messageId)); const mergedMessages = [...remoteMessages.map(m => ({ ...m, status: 'sent' })), ...localOnlyMessages]; mergedMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)); const currentIdsStr = JSON.stringify(currentMessages.map(m => m.messageId)); const newIdsStr = JSON.stringify(mergedMessages.map(m => m.messageId)); if (currentIdsStr !== newIdsStr || currentMessages.some(m => m.status === 'sending')) { state.currentConversation.messages = mergedMessages; ui.renderConversationHistory(); api.call('markConversationAsRead', { userId: state.currentUser.userId, otherUserId }); } } catch (e) { console.error("Polling failed:", e.message); } },
                 async startConversationFromProfile(otherUserId) { core.navigateTo('messages'); const existingConvo = state.conversations.find(c => c.otherUser.userId === otherUserId); if (!existingConvo && state.profileUser && state.profileUser.userId === otherUserId) { const newConvo = { otherUser: { userId: state.profileUser.userId, displayName: state.profileUser.displayName, profilePictureUrl: state.profileUser.profilePictureUrl, isVerified: state.profileUser.isVerified }, lastMessage: '', timestamp: new Date().toISOString(), unreadCount: 0 }; state.conversations.unshift(newConvo); } await handlers.loadConversation(otherUserId, false); },
-                
-                // NEW: Background Poll for Notifications Only
                 async pollNotifications() {
                     if (!state.currentUser) return;
                     try {
@@ -3323,9 +3400,7 @@
                         state.notifications = validNotifs;
                         state.unreadNotificationCount = validNotifs.filter(n => String(n.isRead).toUpperCase() !== 'TRUE').length;
                         core.updateNotificationDot();
-                    } catch (e) {
-                        // Silent fail for polling
-                    }
+                    } catch (e) {}
                 }
             };
 
@@ -3357,7 +3432,7 @@
                             localStorage.setItem('currentUser', JSON.stringify(state.currentUser));
                             const navPfp = document.getElementById('nav-pfp'); if (navPfp) { navPfp.src = sanitizeHTML(state.currentUser.profilePictureUrl) || `https://api.dicebear.com/8.x/thumbs/svg?seed=${state.currentUser.username}`; }
                             document.getElementById('logout-button-container').style.display = 'flex';
-                        } else { if (state.currentUser) { console.warn("Using cached user state."); document.getElementById('logout-button-container').style.display = 'flex'; } else { throw new Error("Could not validate user session."); } }
+                        } else { if (state.currentUser) { document.getElementById('logout-button-container').style.display = 'flex'; } else { throw new Error("Could not validate user session."); } }
 
                         applyOptimisticUpdates(posts);
                         state.posts = posts; state.conversations = conversations; state.currentUserFollowingList = currentUserFollowingList; state.currentUserFollowersList = currentUserFollowersList || []; state.blockedUsersList = blockedUsersList || [];
@@ -3406,13 +3481,13 @@
                     document.getElementById('logout-btn').addEventListener('click', core.logout);
                     document.getElementById('outage-logout-btn').addEventListener('click', core.logout);
                     document.getElementById('theme-switch').addEventListener('change', (e) => { const newTheme = e.target.checked ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', newTheme); localStorage.setItem('theme', newTheme); });
+                    document.getElementById('snow-switch').addEventListener('change', (e) => { state.snowEnabled = e.target.checked; localStorage.setItem('snowEnabled', state.snowEnabled); snowSystem.toggle(state.snowEnabled); });
                     document.getElementById('back-to-profile-btn').addEventListener('click', () => { handlers.showProfile(state.profileUser.userId) });
                     document.getElementById('post-visibility-select').addEventListener('change', handlers.updatePostVisibility);
                     document.getElementById('privacy-switch').addEventListener('change', handlers.updateProfilePrivacy);
                     document.getElementById('add-image-btn').addEventListener('click', () => ui.toggleModal('imageUrl', true));
                     document.getElementById('image-url-modal-done-btn').addEventListener('click', () => { const url = document.getElementById('image-url-modal-input').value.trim(); if (url) { if (state.pendingCommentImagePostId) { state.pendingCommentImages[state.pendingCommentImagePostId] = url; state.pendingCommentImagePostId = null; ui.render(); } else { state.postImageUrl = url; ui.renderImagePreview(); } } document.getElementById('image-url-modal-input').value = ''; ui.toggleModal('imageUrl', false); });
                     
-                    // NEW: Video button handler
                     document.getElementById('add-video-btn').addEventListener('click', () => ui.toggleModal('videoUrl', true));
                     document.getElementById('video-url-done-btn').addEventListener('click', () => {
                          const url = document.getElementById('video-url-input').value.trim();
@@ -3424,12 +3499,11 @@
                          ui.toggleModal('videoUrl', false);
                     });
 
-                    // NEW: Code Embed Handler
                     document.getElementById('add-code-btn').addEventListener('click', () => ui.toggleModal('codeEmbed', true));
                     document.getElementById('code-embed-done-btn').addEventListener('click', () => {
                         const code = document.getElementById('code-embed-input').value;
                         if(code) {
-                            state.pendingPostCode = btoa(code); // Store Base64 code in state
+                            state.pendingPostCode = btoa(code); 
                             ui.renderCodePreview();
                         }
                         document.getElementById('code-embed-input').value = '';
@@ -3482,7 +3556,6 @@
                         if (target.closest('[data-nav="feed"]')) { e.preventDefault(); return core.navigateTo('feed'); }
                         const hashtagLink = target.closest('.hashtag-link'); if (hashtagLink) { 
                             e.preventDefault(); 
-                            // If it's a URL, open new tab
                             if(hashtagLink.href && hashtagLink.href.startsWith('http')) {
                                 window.open(hashtagLink.href, '_blank');
                             } else {
@@ -3513,16 +3586,21 @@
                     const savedUser = JSON.parse(localStorage.getItem('currentUser')); 
                     if (!savedUser) { return core.navigateTo('auth'); } 
                     state.currentUser = savedUser; 
+                    
+                    const savedSnow = localStorage.getItem('snowEnabled');
+                    state.snowEnabled = (savedSnow === null) ? true : (savedSnow === 'true');
+                    snowSystem.init();
+                    snowSystem.toggle(state.snowEnabled);
+
                     const savedNotifBlacklist = JSON.parse(localStorage.getItem('notificationBlacklist') || '[]'); state.deletedNotificationIds = new Set(savedNotifBlacklist);
                     const savedPostBlacklist = JSON.parse(localStorage.getItem('deletedPostIds') || '[]'); state.deletedPostIds = new Set(savedPostBlacklist);
                     const savedCommentBlacklist = JSON.parse(localStorage.getItem('deletedCommentIds') || '[]'); state.deletedCommentIds = new Set(savedCommentBlacklist);
                     const navPfp = document.getElementById('nav-pfp'); if (navPfp && state.currentUser.profilePictureUrl) { navPfp.src = sanitizeHTML(state.currentUser.profilePictureUrl); }
                     core.navigateTo('feed'); ui.showFeedSkeleton(document.getElementById('foryou-feed')); 
                     
-                    // NEW: Start Notification Polling
                     state.notificationPollInterval = setInterval(handlers.pollNotifications, 10000); 
 
-                    try { await core.refreshFeed(false); } catch (error) { alert(`Session error: ${error.message}. Please log in again.`); core.logout(); } 
+                    try { await core.refreshFeed(false); } catch (error) { core.logout(); } 
                 },
                 main() { core.setupEventListeners(); const savedTheme = localStorage.getItem('theme') || 'dark'; document.documentElement.setAttribute('data-theme', savedTheme); document.getElementById('theme-switch').checked = savedTheme === 'dark'; if (localStorage.getItem('currentUser')) { core.initializeApp(); } else { core.navigateTo('auth'); } }
             };
@@ -3538,7 +3616,6 @@
                 return date.toLocaleDateString('en-us', { month: 'short', day: 'numeric' });
             };
             const sanitizeHTML = (str) => { if (!str) return ''; const temp = document.createElement('div'); temp.textContent = str; return temp.innerHTML; };
-            // Ensure global access for the fullscreen handler
             window.handlers = handlers; 
             core.main();
         });
