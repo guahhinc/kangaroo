@@ -4,11 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kangaroo Maintenance</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;600&display=swap" rel="stylesheet">
+
     <style>
         body {
             background-color: #000000;
             color: #ffffff;
-            font-family: 'Courier New', Courier, monospace; /* Monospace fits the "hacking" context well */
+            font-family: 'Inter Tight', sans-serif; /* Updated font */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -24,27 +29,28 @@
         }
 
         h1 {
-            font-size: 2rem;
+            font-size: 2.5rem;
             margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            font-weight: 600;
+            /* Removed uppercase text-transform */
         }
 
         p {
             font-size: 1.1rem;
             line-height: 1.6;
             margin-bottom: 40px;
+            font-weight: 300;
         }
 
         .btn {
             display: inline-block;
-            border: 2px solid #ffffff;
+            border: 1px solid #ffffff; /* Thinned border slightly to match font elegance */
             color: #ffffff;
             padding: 15px 30px;
             text-decoration: none;
-            font-weight: bold;
+            font-weight: 400;
             transition: all 0.3s ease;
-            text-transform: uppercase;
+            border-radius: 4px; /* Slight rounding to match Inter Tight feel */
         }
 
         .btn:hover {
